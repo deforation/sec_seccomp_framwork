@@ -33,15 +33,18 @@
 ******************************************************************/
 
 #include <sys/ptrace.h>
-
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <limits.h>
+#include <string.h>
 
 #include "seccomp_framework/sec_client.h"
 #include "seccomp_framework/sec_tracer.h"
 
-#include "app.c"
+#include "app.c"	 // CHANGE TO YOUR MAIN .C FILE
 
 // Some macros for easy readibility
 #define IS_CHILD_PROC(pid) 	pid==0
