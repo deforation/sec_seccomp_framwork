@@ -385,6 +385,8 @@ def transformGroupToFieldNameInExpression(syscall, expression, primitive_change 
             expression = expression.replace(group["group"] + "=", group["field"] + "=");
             expression = expression.replace(group["group"] + ">", group["field"] + ">");
             expression = expression.replace(group["group"] + "<", group["field"] + "<");
+            expression = expression.replace(group["group"] + ")", group["field"] + ")");
+            expression = expression.replace(group["group"] + "]", group["field"] + "]");
     else:
         new_checks = []
         checks = expression.split("&&");
