@@ -90,24 +90,28 @@
 # 
 # /////////////////////////////////////////////
 #
-# The rule configuration logif allows also to modify and check
-# strings and paths
-#  - dir_starts_with("path") and 
+# The rule configuration logic allows also 
+# to modify and check strings and paths using. 
+# The prefix dir_ is necessary if the auto resolve of 
+# the path within the system call argument should automatically be resolved
+# note that the path parameter is also automatically resolved
+# therefore it is possible to define relative paths
+#  - dir_starts_with("path") 
 #  - dir_ends_with("path")
-# check the associated field against the specified path.
-# it is important to use "dir_" for paths, because in this way
-# relative paths are automatically resolved.
 #
-#  - starts_with("string") and 
-#  - ends_with("string") i
-# Have the same effect, except no path is automatically resolved
 #
+# If on the other way, we want to check strings itself, 
+# the following functions hould be used:
+#  - starts_with("string") 
+#  - ends_with("string")
+#
+# There is also a way to perform checks (no modifications) 
+# on the path of a file descriptor. Note, that file descriptors 
+# generally have no strictly defined path representation, 
+# especially if we deal # with hardlinks,... 
+# The runctions resolve the path based on the directory "/proc/pid/fd/fdnum
 #  - fd_path_starts_with("path") and
 #  - fd_path_ends_with("path")
-# Allow to check the path of a file descriptor like dir_starts_with,...
-# But it is important to know, that a file descriptor generally
-# does not have a fixed path to it. If hard links,.. are used
-# it is likely, that the check may fail and return false
 #
 # -----------------------------------------------------------------
 # Version: 1.0

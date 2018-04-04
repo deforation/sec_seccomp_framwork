@@ -71,7 +71,8 @@ struct match_info{
 	int start;
 	int length;
 	int reference_length;
-	char *realpath;
+	char *realpath_string;
+	char *realpath_check;
 };
 
 // Enumeration of possible rule actions
@@ -95,13 +96,14 @@ struct sec_rule_result {
 #define RED_ZONE	128
 
 // General helper functions
-char *getRealPath(const char *string);
-bool stringMatchesStart(const char *check, const char *string, size_t string_length, bool is_path);
-bool stringMatchesEnd(const char *check, const char *string, size_t string_length, bool is_path);
+char *getPidCwd(pid_t pid);
+char *getPidRealPath(pid_t pid, const char *string);
+bool stringMatchesStart(pid_t pid, const char *check, const char *string, size_t string_length, bool is_path);
+bool stringMatchesEnd(pid_t pid, const char *check, const char *string, size_t string_length, bool is_path);
 bool fdPathMatchesStart(pid_t pid, const char *check, int fd);
 bool fdPathMatchesEnd(pid_t pid, const char *check, int fd);
-struct sec_rule_result changeStringOnStartMatch(const char *check, const char *string, size_t string_length, const char *new_string, bool is_path);
-struct sec_rule_result changeStringOnEndMatch(const char *check, const char *string, size_t string_length, const char *new_string, bool is_path);
+struct sec_rule_result changeStringOnStartMatch(pid_t pid, const char *check, const char *string, size_t string_length, const char *new_string, bool is_path);
+struct sec_rule_result changeStringOnEndMatch(pid_t pid, const char *check, const char *string, size_t string_length, const char *new_string, bool is_path);
 void writeLog(int level, char *string);
 
 // Functions to interact with a target process (Tracee)

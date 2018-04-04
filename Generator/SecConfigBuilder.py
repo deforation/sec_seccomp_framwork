@@ -994,7 +994,7 @@ def generateEmulatorRuleCheck(line, expression_rules, funcinfo):
 
             clause = rule.getCheck()
             if not permission_check is None:
-                clause = "({:s}) && ({:s})".format(rule.getCheck(), permission_check)
+                clause = "({:s}) && ({:s})".format(permission_check, rule.getCheck())
             rule_src = template.replace("{clause}", clause);
             rule_src = rule_src.replace("{rule_action}", "SEC_ACTION_ALLOW")
             rule_src = rule_src.replace("{code}", code);
@@ -1017,7 +1017,7 @@ def generateEmulatorRuleCheck(line, expression_rules, funcinfo):
 
         clause = rule.getCheck()
         if not permission_check is None:
-            clause = "({:s}) && ({:s})".format(rule.getCheck(), permission_check)
+            clause = "({:s}) && ({:s})".format(permission_check, rule.getCheck())
         rule_src = template.replace("{clause}", clause);
         rule_src = rule_src.replace("{code}", "");
         rule_src = rule_src.replace("{rule_action}", "SEC_ACTION_" + rule.getAction().upper())

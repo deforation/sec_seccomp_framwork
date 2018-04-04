@@ -45,19 +45,74 @@ extern int errno;
 
 /*
 * Description:
-* Resolves a path and returns the resolved one with a length of PATH_MAX
+* Returns the working directory for a given process
+* Note that the function uses realpath to
+* resolve /proc/pid/cwd
+* Tests have shown, that readlink can return wrong
+* path information, when for example the client has
+* changed the directory.
+* In this case, read link has returned the old path
+* after a call of getcwd, the path was resolved
+* correctly. Realpath did not had that problem
+*
+* Parameter:
+* pid: process id of the calling process
+*
+* Return
+* Working directory or NULL if it failed
+*/
+char *getPidCwd(pid_t pid){
+	char cwd_path[30] = {"/0"};
+
+	sprintf(cwd_path, "/proc/%d/cwd", pid);
+	char *pid_cwd = realpath(cwd_path, NULL);
+
+	errno = 0;
+	return pid_cwd;
+}
+
+/*
+* Description:
+* Resolves a path and returns the resolved one
+* contrary to the realpath functoin of glibc
+* this version allows to apply the realpath
+* function for an different process
+*
+* this is achieved by temporary changing the working
+* directory
 *
 * Parameters:
+* pid: process id of the calling process
 * string: path to resolve
+*
+* Return;
+* Resolved path or NULL if not successfull
 */
-char *getRealPath(const char *string){
-	char *path = malloc(PATH_MAX);
-	char *res = realpath(string, path);
+char *getPidRealPath(pid_t pid, const char *string){
+	char *pid_cwd = getPidCwd(pid);
+	char *own_cwd = getcwd(NULL, 0);
 
-	if (res == NULL){
-		free(path);
+	// check dirs we got
+	if (pid_cwd == NULL || own_cwd == NULL){
+		return NULL;
+	} 
+
+	// change to dir of pid
+	if (chdir(pid_cwd) == -1){
+		return NULL;
 	}
 
+	// perform realpath action
+	char *res = realpath(string, NULL);
+
+	// change back to old cwd
+	chdir(own_cwd);
+
+	// free data
+	free(pid_cwd);
+	free(own_cwd);
+
+	errno = 0;
 	return res;
 }
 
@@ -72,43 +127,50 @@ char *getRealPath(const char *string){
 * .length: length of the match (length)
 * .reference_length: real length of the string to check
 *                    necessary, because the string can be shorter than the passed size of the buffer
-* .realpath: pointer to the resolved realpath if it was one (needs to be freed)
+* .realpath_string: pointer to the resolved path to check if it was one (needs to be freed)
+* .realpath_check: pointer to the resolved check path (needs to be freed)
 *
 * Parameters:
+* pid: process id of the calling process
 * check: string to match on the parameter string
 * string: string which should be checked
 * string_length: length of the string buffer (must not equal to the string length inside)
 * is_path: defines if the string represents a path (will be resolved)
 */
-struct match_info compareStringStart(const char *check, const char *string, size_t string_length, bool is_path){
+struct match_info compareStringStart(pid_t pid, const char *check, const char *string, size_t string_length, bool is_path){
 	bool result = false;
-	size_t check_length = strlen(check);
+	size_t check_length = 0;
 	size_t real_length = 0;
-	char *realpath = NULL;
+	char *real_string = NULL;
+	char *real_check = NULL;
 
 	if (is_path == true){
-		realpath = getRealPath(string);
+		real_string = getPidRealPath(pid, string);
+		real_check = getPidRealPath(pid, check);
 	}
 
-	if (realpath != NULL){
+	if (real_string != NULL && real_check != NULL){
 		string_length = PATH_MAX;
+		check_length = strlen(real_check);
 		
 		// find the real string end, because the string can be shorter than the buffer size
-		for(real_length = 0; real_length < string_length && realpath[real_length] != '\0'; ++real_length){}
+		for(real_length = 0; real_length < string_length && real_string[real_length] != '\0'; ++real_length){}
 
 		if (real_length >= check_length){
-			result = strncmp(check, realpath, check_length) == 0;			
+			result = (strncmp(real_check, real_string, check_length) == 0) ? true : false;			
 		}
 	} else {
+		check_length = strlen(check);
+
 		// find the real string end, because the string can be shorter than the buffer size
 		for(real_length = 0; real_length < string_length && string[real_length] != '\0'; ++real_length){}
 
 		if (real_length >= check_length){
-			result = strncmp(check, string, check_length) == 0;			
+			result = (strncmp(check, string, check_length) == 0) ? true : false;			
 		}
 	}
 
-	return (struct match_info) {.match = result, .start = 0, .length = check_length, .reference_length = real_length, .realpath = realpath};
+	return (struct match_info) {.match = result, .start = 0, .length = check_length, .reference_length = real_length, .realpath_string = real_string, .realpath_check = real_check};
 }
 
 
@@ -123,32 +185,34 @@ struct match_info compareStringStart(const char *check, const char *string, size
 * .length: length of the match (length)
 * .reference_length: real length of the string to check
 *                    necessary, because the string can be shorter than the passed size of the buffer
-* .realpath: pointer to the resolved realpath if it was one (needs to be freed)
+* .realpath_string: pointer to the resolved realpath if it was one (needs to be freed)
+* .realpath_check: pointer to the resolved check path (needs to be freed)
 *
 * Parameters:
+* pid: process id of the calling process
 * check: string to match on the parameter string
 * string: string which should be checked
 * string_length: length of the string buffer (must not equal to the string length inside)
 * is_path: defines if the string represents a path (will be resolved)
 */
-struct match_info compareStringEnd(const char *check, const char *string, size_t string_length, bool is_path){
+struct match_info compareStringEnd(pid_t pid, const char *check, const char *string, size_t string_length, bool is_path){
 	bool result = false;
 	size_t check_length = strlen(check);
 	size_t real_length = 0;
-	char *realpath = NULL;
+	char *real_string = NULL;
 
 	if (is_path == true){
-		realpath = getRealPath(string);
+		real_string = getPidRealPath(pid, string);
 	}
 
-	if (realpath != NULL){
+	if (real_string != NULL){
 		string_length = PATH_MAX;
 
 		// find the real string end, because the string can be shorter than the buffer size
-		for(real_length = 0; real_length < string_length && realpath[real_length] != '\0'; ++real_length){}
+		for(real_length = 0; real_length < string_length && real_string[real_length] != '\0'; ++real_length){}
 
 		if (real_length >= check_length){
-			result = strncmp(check, &realpath[real_length - check_length], check_length) == 0;			
+			result = strncmp(check, &real_string[real_length - check_length], check_length) == 0;			
 		}
 	} else {
 		// find the real string end, because the string can be shorter than the buffer size
@@ -159,7 +223,7 @@ struct match_info compareStringEnd(const char *check, const char *string, size_t
 		}
 	}
 
-	return (struct match_info) {.match = result, .start = real_length - check_length, .length = check_length, .reference_length = real_length, .realpath = realpath};
+	return (struct match_info) {.match = result, .start = real_length - check_length, .length = check_length, .reference_length = real_length, .realpath_string = real_string, .realpath_check = NULL};
 }
 
 /*
@@ -167,16 +231,20 @@ struct match_info compareStringEnd(const char *check, const char *string, size_t
 * Checks if a string matches a specific substring at the beginning
 *
 * Parameters:
+* pid: process id of the calling process
 * check: string to match on the parameter string
 * string: string which should be checked
 * string_length: length of the string buffer (must not equal to the string length inside)
 * is_path: defines if the string represents a path (will be resolved)
 */
-bool stringMatchesStart(const char *check, const char *string, size_t string_length, bool is_path){
-	struct match_info matchdata = compareStringStart(check, string, string_length, is_path);
+bool stringMatchesStart(pid_t pid, const char *check, const char *string, size_t string_length, bool is_path){
+	struct match_info matchdata = compareStringStart(pid, check, string, string_length, is_path);
 
-	if (matchdata.realpath != NULL){
-		free(matchdata.realpath);
+	if (matchdata.realpath_string != NULL){
+		free(matchdata.realpath_string);
+	}
+	if (matchdata.realpath_check != NULL){
+		free(matchdata.realpath_check);
 	}
 
 	return matchdata.match;
@@ -187,16 +255,20 @@ bool stringMatchesStart(const char *check, const char *string, size_t string_len
 * Checks if a string matches a specific substring at the end
 *
 * Parameters:
+* pid: process id of the calling process
 * check: string to match on the parameter string
 * string: string which should be checked
 * string_length: length of the string buffer (must not equal to the string length inside)
 * is_path: defines if the string represents a path (will be resolved)
 */
-bool stringMatchesEnd(const char *check, const char *string, size_t string_length, bool is_path){
-	struct match_info matchdata = compareStringEnd(check, string, string_length, is_path);
+bool stringMatchesEnd(pid_t pid, const char *check, const char *string, size_t string_length, bool is_path){
+	struct match_info matchdata = compareStringEnd(pid, check, string, string_length, is_path);
 
-	if (matchdata.realpath != NULL){
-		free(matchdata.realpath);
+	if (matchdata.realpath_string != NULL){
+		free(matchdata.realpath_string);
+	}
+	if (matchdata.realpath_check != NULL){
+		free(matchdata.realpath_check);
 	}
 
 	return matchdata.match;
@@ -219,15 +291,25 @@ bool stringMatchesEnd(const char *check, const char *string, size_t string_lengt
 * fd: file descriptor to check
 */
 bool fdPathMatchesStart(pid_t pid, const char *check, int fd){
-	char fd_path[PATH_MAX] = {"/0"};
 	char file[80] = {"/0"};
+	bool result = false;
 
 	sprintf(file, "/proc/%d/fd/%d", pid, fd);
-	if (readlink(file, fd_path, PATH_MAX) == -1){
-		return false;
-	} else {
-		return stringMatchesStart(check, fd_path, PATH_MAX, false);
+	char *fd_path = realpath(file, NULL);
+	if (fd_path != NULL){
+		char *real_check_path = getPidRealPath(pid, check);
+
+		if (real_check_path != NULL){
+			result = stringMatchesStart(pid, real_check_path, fd_path, PATH_MAX, false);
+			free(real_check_path);
+		} else {
+			result = stringMatchesStart(pid, check, fd_path, PATH_MAX, false);
+		}
+
+		free(fd_path);
 	}
+
+	return result;
 }
 
 /*
@@ -247,15 +329,16 @@ bool fdPathMatchesStart(pid_t pid, const char *check, int fd){
 * fd: file descriptor to check
 */
 bool fdPathMatchesEnd(pid_t pid, const char *check, int fd){
-	char fd_path[PATH_MAX] = {"/0"};
 	char file[80] = {"/0"};
+	bool result = false;
 
 	sprintf(file, "/proc/%d/fd/%d", pid, fd);
-	if (readlink(file, fd_path, PATH_MAX) == -1){
-		return false;
-	} else {
-		return stringMatchesEnd(check, fd_path, PATH_MAX, false);
+	char *fd_path = realpath(file, NULL);
+	if (fd_path != NULL){
+		result = stringMatchesEnd(pid, check, fd_path, PATH_MAX, false);
 	}
+
+	return result;
 }
 
 /*
@@ -267,15 +350,16 @@ bool fdPathMatchesEnd(pid_t pid, const char *check, int fd){
 * Returns the sec_rule_result struct with the instructions about the new data
 *
 * Parameters:
+* pid: process id of the calling process
 * check: string to match on the parameter string
 * string: string which should be checked
 * string_length: length of the string buffer (must not equal to the string length inside)
 * new_string: replacement string for the match region
 * is_path: defines if the string represents a path (will be resolved)
 */
-struct sec_rule_result changeStringOnStartMatch(const char *check, const char *string, size_t string_length, const char *new_string, bool is_path){
+struct sec_rule_result changeStringOnStartMatch(pid_t pid, const char *check, const char *string, size_t string_length, const char *new_string, bool is_path){
 	struct sec_rule_result result = {.action = SEC_ACTION_NONE, .new_value = NULL, .size = -1};
-	struct match_info matchdata = compareStringStart(check, string, string_length, is_path);
+	struct match_info matchdata = compareStringStart(pid, check, string, string_length, is_path);
 
 	if (matchdata.match){
 		string_length = matchdata.reference_length;
@@ -285,8 +369,8 @@ struct sec_rule_result changeStringOnStartMatch(const char *check, const char *s
 		memset(buffer, 0, buffer_size);
 
 		strncpy(buffer, new_string, new_string_length);
-		if (matchdata.realpath != NULL){
-			strncpy(&buffer[new_string_length], &matchdata.realpath[matchdata.length], string_length - matchdata.length);
+		if (matchdata.realpath_string != NULL){
+			strncpy(&buffer[new_string_length], &matchdata.realpath_string[matchdata.length], string_length - matchdata.length);
 		} else {
 			strncpy(&buffer[new_string_length], &string[matchdata.length], string_length - matchdata.length);
 		}
@@ -295,8 +379,11 @@ struct sec_rule_result changeStringOnStartMatch(const char *check, const char *s
 	}
 
 	// free realpath data
-	if (matchdata.realpath != NULL){
-		free(matchdata.realpath);
+	if (matchdata.realpath_string != NULL){
+		free(matchdata.realpath_string);
+	}
+	if (matchdata.realpath_check != NULL){
+		free(matchdata.realpath_check);
 	}
 
 	return result;
@@ -311,14 +398,15 @@ struct sec_rule_result changeStringOnStartMatch(const char *check, const char *s
 * Returns the sec_rule_result struct with the instructions about the new data
 *
 * Parameters:
+* pid: process id of the calling process
 * check: string to match on the parameter string
 * string: string which should be checked
 * string_length: length of the string buffer (must not equal to the string length inside)
 * is_path: defines if the string represents a path (will be resolved)
 */
-struct sec_rule_result changeStringOnEndMatch(const char *check, const char *string, size_t string_length, const char *new_string, bool is_path){
+struct sec_rule_result changeStringOnEndMatch(pid_t pid, const char *check, const char *string, size_t string_length, const char *new_string, bool is_path){
 	struct sec_rule_result result = {.action = SEC_ACTION_NONE, .new_value = NULL, .size = -1};
-	struct match_info matchdata = compareStringEnd(check, string, string_length, is_path);
+	struct match_info matchdata = compareStringEnd(pid, check, string, string_length, is_path);
 
 	if (matchdata.match){
 		string_length = matchdata.reference_length;
@@ -327,8 +415,8 @@ struct sec_rule_result changeStringOnEndMatch(const char *check, const char *str
 		char *buffer = malloc(buffer_size);
 		memset(buffer, 0, buffer_size);
 
-		if (matchdata.realpath != NULL){
-			strncpy(buffer, matchdata.realpath, string_length - matchdata.length);
+		if (matchdata.realpath_string != NULL){
+			strncpy(buffer, matchdata.realpath_string, string_length - matchdata.length);
 		} else {
 			strncpy(buffer, string, string_length - matchdata.length);
 		}
@@ -338,8 +426,11 @@ struct sec_rule_result changeStringOnEndMatch(const char *check, const char *str
 	}
 
 	// free realpath data
-	if (matchdata.realpath != NULL){
-		free(matchdata.realpath);
+	if (matchdata.realpath_string != NULL){
+		free(matchdata.realpath_string);
+	}
+	if (matchdata.realpath_check != NULL){
+		free(matchdata.realpath_check);
 	}
 
 	return result;

@@ -23,7 +23,7 @@
 *
 * All log action are performed using the syslog library
 * of linux. The entries are stored under the name
-* sec_seccomp_log in /var/log/syslog (UBUNTU)
+* sec_seccomp_log in /var/log/syslog (Debian)
 *
 * NOTE:
 * This file consists only of some system calls for demo
@@ -214,13 +214,10 @@ void sec_getcwd(__OUT char *buf, unsigned long size){
 	DEBUG_END()
 
 	// simulate getcwd
-	char *name = malloc(size);
-
-	sprintf(name, "/proc/%d/cwd", __PID);
-	realpath(name, buf);
-
-	free(name);
-
+	char *cwd = getPidCwd(pid);
+	strncpy(buf, cwd, size);
+	free(cwd);
+	
 	// set return value and modify the return parameter
 	OVERWRITE(buf, buf)
 	OVERWRITE(return, strlen(buf))

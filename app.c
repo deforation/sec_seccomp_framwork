@@ -97,24 +97,26 @@ int sec_main_after(int argc, char **argv){
 
 	// read and write file test
 	printf(" ** Try to read a valid file. Should be possible\n");
-	readFile("/home/remo/Schreibtisch/test/valid/test.txt", "r");
+	readFile("./demo_files/valid/test.txt", "r");
 
 	printf(" ** Try to read the modify file with r. Should be redirected to the redirected file.\n");
-	readFile("/home/remo/Schreibtisch/test/modify/test.txt", "r");
+	readFile("./demo_files/modify/test.txt", "r");
 
 	printf(" ** Try to read the skip file with r. Should return an error and print nothing.\n");
-	readFile("/home/remo/Schreibtisch/test/skip/test.txt", "r");
+	readFile("./demo_files/skip/test.txt", "r");
 
 	printf(" ** Try to create a file and write data into it in a directory where create is disallowed and read allowed. Should not be allowed.\n");
-	createFile("/home/remo/Schreibtisch/test/write_yes_create_no/existing.txt");
+	createFile("./demo_files/write_yes_create_no/existing.txt");
 
 	printf(" ** Try to read a file in a directory where create is disallowed and read allowed. Should be possible.\n");
-	readFile("/home/remo/Schreibtisch/test/write_yes_create_no/existing.txt", "r+");
+	readFile("./demo_files/write_yes_create_no/existing.txt", "r+");
 
 	printf(" ** Try to read a file with the ending .txt. Should redirected to the .dat file.\n");
-	readFile("/home/remo/Schreibtisch/test/filechange/test.dat", "r");
+	readFile("./demo_files/filechange/test.dat", "r");
 
 	// getcwd and chdir test
+	char cwdsafe[PATH_MAX];
+	getcwd(cwdsafe, PATH_MAX);
 	printf("--------------------------\n");
 	char dir[100] = "should be cleared";
 	printf("PTR: %p\n", dir);
@@ -130,11 +132,12 @@ int sec_main_after(int argc, char **argv){
 	getcwd(test, 100);
 	printf("Client CWD is: %s\n", test);
 	printf("--------------------------\n");
-	printf("Try Change CWD to invalid FOLDER: %s\n", "/home/remo/Schreibtisch/test/invalid");
-	printf("Due to the defined rule, the path should be /home/remo/Schreibtisch/test/valid instead\n");
-	chdir("/home/remo/Schreibtisch/test/invalid");
+	printf("Try Change CWD to invalid FOLDER: %s\n", "./demo_files/invalid");
+	printf("Due to the defined rule, the path should be ./demo_files/valid instead\n");
+	chdir("./demo_files/invalid");
 	getcwd(dir, 100);
 	printf("Client CWD is: %s\n", dir);
+	chdir(cwdsafe);
 	printf("--------------------------\n");
 
 	// setrlimit test
@@ -174,7 +177,7 @@ int sec_main_after(int argc, char **argv){
 
 	printf("--------------------------\n\n");
 	printf("Try to read the access mode with fcntl -> should be possible\n");
-	FILE *ffc = fopen("/home/remo/Schreibtisch/test/fd_copy_deny/test.txt", "r");
+	FILE *ffc = fopen("./demo_files/fd_copy_deny/test.txt", "r");
 	int flags = fcntl(fileno(ffc), F_GETFL, 0);
 	if (flags >= 0){
 		printf("RULE SUCCESSFUL\n");
@@ -183,19 +186,20 @@ int sec_main_after(int argc, char **argv){
 	errno = 0;
 	int desc = fcntl(fileno(ffc), F_GETFD, 0);
 	if (desc < 0){
-		printf("RULE SUCCESSFUL (errno = %d)\n", errno);
+		printf("RULE SUCCESSFUL\n");
 	}
 	fclose(ffc);
 
 	// file descriptor test
 	printf("--------------------------\n\n");
-	printf("Try to copy a file descriptor which is blocked\n");
+	printf("Try to copy a file descriptor which is not permitted\n");
 
-	FILE *f = fopen("/home/remo/Schreibtisch/test/fd_copy_deny/test.txt", "r");
+	FILE *f = fopen("./demo_files/fd_copy_deny/test.txt", "r");
 	char line[1024];
 	if (f){
+		printf(" - file descriptor is open with content:\n");
 		while (fgets(line, sizeof(line), f) != NULL){
-			printf("%s", line);
+			printf(" - %s", line);
 		}
 	} else {
 		printf("Could not open file");
@@ -206,7 +210,9 @@ int sec_main_after(int argc, char **argv){
 	int fd_copy = dup(fileno(f));
 	printf("copied fd: %d\n", fd_copy);
 	if (fd_copy == -1){
-		printf("COPY failed as expected (errno = %d)\n", errno);
+		printf("COPY failed as expected\n");
+	} else {
+		printf("ERROR, Wrong result\n");
 	}
 	fclose(f);
 
