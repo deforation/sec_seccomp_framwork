@@ -101,14 +101,14 @@ A normal client application needs at least the following permissions so it is ab
 The rule file itself has the following structure (or see the example rule file in the repository):
 ```
 [General]
-debug:     				True or False
-default_action:			{action} (trap, terminate, skip, allow or modify)
+debug:     		True or False
+default_action:		{action} (trap, terminate, skip, allow or modify)
 default_action_tracer:	{action} (allow, terminate)
 
 # defines which systemcalls shoud strictly be allowed, forbidden,...
-syscall {action}:			list of systemcalls like (open, write, ...)
+syscall {action}:		list of systemcalls like (open, write, ...)
 # the same for the tracer
-tracer {action}:			list of systemcalls like (open, write, ...)
+tracer {action}:		list of systemcalls like (open, write, ...)
 
 [Global]
 # Allows to define rules targeting all system calls which
@@ -129,50 +129,50 @@ to specify multiple checks / actions by separating them with a comma
 - {c-expression} 	defines nearly any kind of c expression.
                   	example: domain == AF_UNIX
                  	example: domain == AF_UNIX && type == SOCK_STREAM
-				   	example: (rlim->rlim_max < 50 || rlim->rlim_max > 100) && resource == 5
-				   	example: stat->st_uid == getuid()
+			example: (rlim->rlim_max < 50 || rlim->rlim_max > 100) && resource == 5
+			example: stat->st_uid == getuid()
 
 - {permissions}  	defines a permission string consisting of "rwcx"
-				   	r = read, w = write, c = create, x = execute
-				   	if for example the paremeter flags in the open syscall
- 				   	is added to the group permission_flag, it is checked against
-				   	these flags
-				  	example: allow(r)    path dir_starts_with("/home/remo/read_only_dir")
-				   	example: allow(r)    path not dir_starts_with("/home/remo/read_only_dir")
+			r = read, w = write, c = create, x = execute
+			if for example the paremeter flags in the open syscall
+ 			is added to the group permission_flag, it is checked against
+			these flags
+			example: allow(r)    path dir_starts_with("/home/remo/read_only_dir")
+			example: allow(r)    path not dir_starts_with("/home/remo/read_only_dir")
 
-- {field}		   	defines the field against a value should be checked.
-				   	it can either be the name of the argument or the group name of an argument
-					it is also possible to access elements of a struct as it would be in c
-					example: filename
-					example: buf
-					example: rlim->rlim_max
+- {field}		defines the field against a value should be checked.
+			it can either be the name of the argument or the group name of an argument
+			it is also possible to access elements of a struct as it would be in c
+			example: filename
+			example: buf
+			example: rlim->rlim_max
 
 - {value_check}  	defines a check against a specific value. These can easier be transformed
-				   	into kernel checked system calls.
-				   	example: != AF_IPX
-				   	example: == AF_UNIX or just AF_UNIX
-					example: dir_starts_with("/home/remo/Desktop")
-					example: starts_with("start of a string")
+			into kernel checked system calls.
+			example: != AF_IPX
+			example: == AF_UNIX or just AF_UNIX
+			example: dir_starts_with("/home/remo/Desktop")
+			example: starts_with("start of a string")
 
 - {new_value}		Defines the new value an argument should get before syscall execution
-					It can either be a value like 10, AF_UNIX, ... or a String "new_string"
-					example: redirect		resource == 1 && rlim->rlim_max > 2048: rlim->rlim_max => 1024
-					example: path redirect:	dir_starts_with("/home/remo/denied") => "/home/remo/allowed"
- 					example: redirect:		filename dir_ends_with(".txt") => ".dat"
+			It can either be a value like 10, AF_UNIX, ... or a String "new_string"
+			example: redirect		resource == 1 && rlim->rlim_max > 2048: rlim->rlim_max => 1024
+			example: path redirect:		dir_starts_with("/home/remo/denied") => "/home/remo/allowed"
+ 			example: redirect:		filename dir_ends_with(".txt") => ".dat"
 
 
-default:								{action} 	//specifies the default action of a syscall section
+default:				{action} 	//specifies the default action of a syscall section
 
-{action}:								{c-expression}, {c-expression}, ...
-{action}({permissions}):				{c-expression}, {c-expression}, ...
+{action}:				{c-expression}, {c-expression}, ...
+{action}({permissions}):		{c-expression}, {c-expression}, ...
 
-{field} {action}:						{value_check}, {value_check}, ...
-{field} {action}({permissions}):		{value_check}, {value_check}, ...
+{field} {action}:			{value_check}, {value_check}, ...
+{field} {action}({permissions}):	{value_check}, {value_check}, ...
 
-redirect:								{c-expression}: {field} => {new_value}, {c-expression}: {field} => {new_value}, ...
-redirect({permissions}):				{c-expression}: {field} => {new_value}, {c-expression}: {field} => {new_value}, ...
-{field} redirect:						{value_check}, {value_check}, ...
-{field} redirect({permissions}):		{value_check}, {value_check}, ...
+redirect:				{c-expression}: {field} => {new_value}, {c-expression}: {field} => {new_value}, ...
+redirect({permissions}):		{c-expression}: {field} => {new_value}, {c-expression}: {field} => {new_value}, ...
+{field} redirect:			{value_check}, {value_check}, ...
+{field} redirect({permissions}):	{value_check}, {value_check}, ...
 ```
 
 The rule configuration logic allows also to modify and check strings and paths using. The prefix dir_ is necessary if the auto resolve of the path within the system call argument should automatically be resolved. Note that the value it should be checked against is also automatically resolved, which allows to define relative path checks
@@ -193,23 +193,23 @@ The runctions resolve the path based on the directory "/proc/pid/fd/fdnum
 The following examples show what is possible with the rule definition scheme
 ```
 [setrlimit]
-default:					allow
-redirect:					resource == RLIMIT_NPROC && limit->rlim_max > 8: limit->rlim_max => 8,
-							limit->rlim_cur > limit->rlim_max: limit->rlim_cur => limit->rlim_max-1
-terminate:					(rlim->rlim_max > 33317 || rlim->rlim_max == 33320) && resource == 5	
+default:			allow
+redirect:			resource == RLIMIT_NPROC && limit->rlim_max > 8: limit->rlim_max => 8,
+				limit->rlim_cur > limit->rlim_max: limit->rlim_cur => limit->rlim_max-1
+terminate:			(rlim->rlim_max > 33317 || rlim->rlim_max == 33320) && resource == 5	
 rlim->rlim_min allow:		> 20, != 30, >= 50, 80
 rlim->rlim_low redirect:	20 => 50, 80 => 30
 
 [open]
-default:					allow
-path redirect(r):			dir_starts_with("./demo_files/modify") => "./demo_files/redirected_read"
-skip(c):					filename dir_starts_with("./demo_files/write_yes_create_no")
-allow(w):					filename dir_starts_with("./demo_files/write_yes_create_no")
+default:			allow
+path redirect(r):		dir_starts_with("./demo_files/modify") => "./demo_files/redirected_read"
+skip(c):			filename dir_starts_with("./demo_files/write_yes_create_no")
+allow(w):			filename dir_starts_with("./demo_files/write_yes_create_no")
 
 [fcntl]:
-default:					terminate
-cmd allow:					F_GETFL
-skip:						cmd == F_GETFD
+default:			terminate
+cmd allow:			F_GETFL
+skip:				cmd == F_GETFD
 ```
 
 ## System call configuration scheme
@@ -233,56 +233,56 @@ A function definition has the following format consisting
 of a comment block defining important data and the function itself
 
 - {syscall_name}:		Describes the name of the system call which
-						will be modified. Starts usually with SYS_{name}
-						example: SYS_open, SYS_gettimeofday
+				will be modified. Starts usually with SYS_{name}
+				example: SYS_open, SYS_gettimeofday
 
 - {header_list}:		Defines a list of headers which have to be
-						included in order to be able to compile the file
-						The list is separated through commas
-						example: sys/time.h, sys/resource.h
+				included in order to be able to compile the file
+				The list is separated through commas
+				example: sys/time.h, sys/resource.h
 
-- {field}:				Represents the name of a system call argument
- 						example: filename
+- {field}:			Represents the name of a system call argument
+ 				example: filename
 
-- {group_name_list}:	Defines a name of alternative names for which
-						the argument can be called in the rule definition
-						file. This is useful, if we would like to perform
-						actions on all paths for different system calls
-						example: open_path, my_path_group		
+- {group_name_list}:		Defines a name of alternative names for which
+				the argument can be called in the rule definition
+				file. This is useful, if we would like to perform
+				actions on all paths for different system calls
+				example: open_path, my_path_group		
 
-- {length}:				Defines the length of the specified field
-						This is important, if we deal with pointers where
-						the size is given through another parameter or
-						if it is a zero terminated string.
-						In getcwd, the buf size is for example
-						defined thorugh the parameter size of the syscall
-						The length can therefore be an integer, argument name
-						or an expression like strlen+1
-						If no length is defined, sizeof is used as default
-						example: strlen+1
-						example: size_arg
+- {length}:			Defines the length of the specified field
+				This is important, if we deal with pointers where
+				the size is given through another parameter or
+				if it is a zero terminated string.
+				In getcwd, the buf size is for example
+				defined thorugh the parameter size of the syscall
+				The length can therefore be an integer, argument name
+				or an expression like strlen+1
+				If no length is defined, sizeof is used as default
+				example: strlen+1
+				example: size_arg
 
 - {arguments}:			Describes the arguments of the system call as they are 
-						listed in the man page or source.
-						If an argument is a buffer which is filled by a 
-						system call as for example in getcwd,
-						The buffer parameter has to be marked by the
-						__OUT macro
-						example: __OUT struct timeval *tv, __OUT struct timezone *tz
-						example: const char *filename, int flags, mode_t mode
+				listed in the man page or source.
+				If an argument is a buffer which is filled by a 
+				system call as for example in getcwd,
+				The buffer parameter has to be marked by the
+				__OUT macro
+				example: __OUT struct timeval *tv, __OUT struct timezone *tz
+				example: const char *filename, int flags, mode_t mode
 
 - {ov_target}:			Argument which should be overwritten
-						Has to be one of the syscalls argument names
+				Has to be one of the syscalls argument names
 
 - {ov_value}:			Variable containing the new value for the field
-						Has to be from the same datatype
+				Has to be from the same datatype
 ```
 ```c
 / * 
 * systemcall:			{syscall_name}
-* headers:				{header_list}
-* set_group[{field}]:	{group_name_list}
-* set_length[{field}]:	{length}
+* headers:			{header_list}
+* set_group[{field}]:		{group_name_list}
+* set_length[{field}]:		{length}
 * /
 void sec_functionname({arguments}){
 	// any kind of source
@@ -335,8 +335,8 @@ void sec_functionname({arguments}){
 The following examples show how the system calls can be defined.
 ```c
 /*
-* systemcall: 			SYS_open
-* headers: 				stdlib.h, stdio.h
+* systemcall: 		SYS_open
+* headers: 		stdlib.h, stdio.h
 *
 * set_group[filename]: 	path
 * set_group[flags]: 	permission_flag
@@ -356,11 +356,11 @@ void sec_open(const char *filename, int flags, mode_t mode){
 }
 
 /*
-* systemcall: 			SYS_socket
-* headers:				sys/socket.h, sys/un.h
+* systemcall: 		SYS_socket
+* headers:		sys/socket.h, sys/un.h
 *
 * set_group[domain]: 	domain
-* set_group[type]: 		socket_type
+* set_group[type]: 	socket_type
 * set_group[protocol]: 	protocol
 */
 void sec_socket(int domain, int type, int protocol){
