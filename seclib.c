@@ -65,8 +65,6 @@
 * Exit message
 */
 int main_before(int argc, char **argv){
-	printf("MAIN BEFORE START\n");
-
 	#ifdef SEC_MAIN_BEFORE
 		return sec_main_before(argc, argv);
 	#elif 
@@ -89,8 +87,6 @@ int main_before(int argc, char **argv){
 * Exit message
 */
 int main_after(int argc, char **argv){
-	printf("MAIN AFTER START\n");
-
 	#ifdef SEC_MAIN_AFTER
 		return sec_main_after(argc, argv);
 	#elif

@@ -676,11 +676,9 @@ void sec_seccomp_export_bpf(seccomp_ctx ctx, int fd){
 			switch(pt->seccomp_action & 0xFFFF0000U){
 				case SCMP_ACT_KILL:
 					strcpy(act, "SECCOMP_RET_KILL");
-					printf("kill\n");
 					break;
 				case SCMP_ACT_TRAP:
 					strcpy(act, "SECCOMP_RET_TRAP");
-					printf("trap\n");
 					break;
 				case SCMP_ACT_ERRNO(0):
 					sprintf(act, "SECCOMP_RET_ERRNO | (%u & SECCOMP_RET_DATA)", pt->seccomp_action & 0x0000FFFFFU);
