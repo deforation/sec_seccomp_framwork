@@ -38,7 +38,6 @@ void readFile(char *path, char *access){
 		while (fgets(line, sizeof(line), f2) != NULL){
 			printf("%s", line);
 		}
-		printf("\n");
 		fclose(f2);
 	} else {
 		printf("Error\n");
@@ -70,7 +69,7 @@ void createFile(char *path){
 	FILE *f2;
 	f2 = fopen(path, "w");
 	if (f2){
-		fprintf(f2, "created forbidden file");
+		fprintf(f2, "created forbidden file, rule was unsuccessful");
 		fclose(f2);
 	} else {
 		printf("Error\n");
@@ -97,14 +96,22 @@ int sec_main_after(int argc, char **argv){
 	(void)argv;
 
 	// read and write file test
+	printf(" ** Try to read a valid file. Should be possible\n");
 	readFile("/home/remo/Schreibtisch/test/valid/test.txt", "r");
+
+	printf(" ** Try to read the modify file with r. Should be redirected to the redirected file.\n");
 	readFile("/home/remo/Schreibtisch/test/modify/test.txt", "r");
-	readFile("/home/remo/Schreibtisch/test/modify/test.txt", "r+");
+
+	printf(" ** Try to read the skip file with r. Should return an error and print nothing.\n");
 	readFile("/home/remo/Schreibtisch/test/skip/test.txt", "r");
 
-	//createFile("/home/remo/Schreibtisch/test/write_yes_create_no/new.txt");
+	printf(" ** Try to create a file and write data into it in a directory where create is disallowed and read allowed. Should not be allowed.\n");
+	createFile("/home/remo/Schreibtisch/test/write_yes_create_no/existing.txt");
 
-	writeFile("/home/remo/Schreibtisch/test/write_yes_create_no/existing.txt", "r+");
+	printf(" ** Try to read a file in a directory where create is disallowed and read allowed. Should be possible.\n");
+	readFile("/home/remo/Schreibtisch/test/write_yes_create_no/existing.txt", "r+");
+
+	printf(" ** Try to read a file with the ending .txt. Should redirected to the .dat file.\n");
 	readFile("/home/remo/Schreibtisch/test/filechange/test.dat", "r");
 
 	// getcwd and chdir test
@@ -141,6 +148,8 @@ int sec_main_after(int argc, char **argv){
 	printf("cur: %ld\n", rlim.rlim_cur);
 	printf("max: %ld\n", rlim.rlim_max);
 
+
+	printf("\nTry to set RLIMIT_CPU to cur = 200 and max to 250. Should not be possible (skip call)\n");
 	lim = (struct rlimit){rlim_cur: 200, rlim_max: 250};
 	setrlimit(RLIMIT_CPU, &lim);
 	getrlimit(RLIMIT_CPU, &rlim);
@@ -149,21 +158,19 @@ int sec_main_after(int argc, char **argv){
 	
 	// get timeofday test
 	printf("--------------------------\n\n");
-	printf("Get the time which is slightly modified\n");
+	printf("Get the time which is slightly modified on each call\n");
 	char buffer[30];
 	struct timeval tv;
 
 	time_t curtime;
 
-	(void)buffer;
-	(void)tv;
-	(void)curtime;
+	for (int i = 0; i < 5; i++){
+		syscall(SYS_gettimeofday, &tv, NULL);
+		curtime=tv.tv_sec;
+		strftime(buffer,30,"%m-%d-%Y  %T.",localtime(&curtime));
+		printf("%s%ld\n",buffer,tv.tv_usec);
+	}
 
-	syscall(SYS_gettimeofday, &tv, NULL);
-	curtime=tv.tv_sec;
-	strftime(buffer,30,"%m-%d-%Y  %T.",localtime(&curtime));
-	printf("%s%ld\n",buffer,tv.tv_usec);
-	
 
 	printf("--------------------------\n\n");
 	printf("Try to read the access mode with fcntl -> should be possible\n");

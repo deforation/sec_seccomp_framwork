@@ -273,11 +273,15 @@ void sec_setrlimit(int resource, struct rlimit *rlim){
 * set_group[tz]:		timezone
 */
 void sec_gettimeofday(__OUT struct timeval *tv, __OUT struct timezone *tz){
-	time_t t;
-	int retval = gettimeofday(tv, tz);	
-
+	static int randval = 0;
+	int retval = gettimeofday(tv, tz);
+	
 	// we wont expose the real time to the calling application, so we add a random value on top of it
-	srand((unsigned) time(&t));
+	if (randval == 0){
+		srand(time(0));
+		randval = (int)rand();
+	}
+	srand(++randval);
 	float offset = (float)rand() - RAND_MAX/2;
 	tv->tv_sec += (int)(offset / RAND_MAX * 20.0);
 

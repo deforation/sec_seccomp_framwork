@@ -19,7 +19,6 @@
 * -----------------------------------------------------------------
 *
 ******************************************************************/
-
 #include <sys/user.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -663,7 +662,6 @@ void invalidateSystemcall(pid_t pid){
 	ptrace(PTRACE_GETREGS, pid, NULL, &regs);
 	regs.orig_rax = -1;
 	ptrace(PTRACE_SETREGS, pid, NULL, &regs);
-	modifyReturnValue(pid, -1);
 }
 
 /*

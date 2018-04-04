@@ -58,13 +58,12 @@ typedef int bool;
 #endif
 
 // Defines tracer constants sent thorugh the PTRACE_GETEVENTMSG event
-#define PTRACE_SYSCALL_SHIFT		12
+#define PTRACE_DATA_SHIFT			6
 #define PTRACE_DBG_ALLOW			0x01
 #define PTRACE_DBG_TERMINATE		0x02
 #define PTRACE_DBG_MODIFY			0x04
 #define PTRACE_DBG_SKIP				0x08
 #define PTRACE_EXECUTE				0x10
-#define PTRACE_GENERAL_RULE			0x20
 
 // Structure containing data about the match of a string comparison
 struct match_info{

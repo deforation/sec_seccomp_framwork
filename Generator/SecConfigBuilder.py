@@ -673,9 +673,7 @@ def generateSeccompRuleCode(rules, comment, for_tracer = False):
         code_lines.append(comment)
         for rule in rules:
             action_name = "" if not for_tracer else "_tracer";
-            action_str = getSourceTemplate("seccomp_{:s}{:s}".format(rule.getAction(), action_name)).replace("{syscall_nr}", "SCMP_SYS({:s})".format(rule.getSyscall())).replace("{errorcode}", "-1");
-            if "{default_flag}" in action_str:
-                action_str = action_str.replace("{default_flag}", getSourceTemplate("seccomp_default_flag"))
+            action_str = getSourceTemplate("seccomp_{:s}{:s}".format(rule.getAction(), action_name)).replace("{syscall_nr}", "SCMP_SYS({:s})".format(rule.getSyscall())).replace("{errorcode}", "EPERM");
 
             if rule.hasParameterChecks():
                 checks = rule.getParameterChecks();
@@ -730,8 +728,6 @@ def generateSeccompInitRoutine(seccomp_rules, seccomp_rules_tracer = None):
 
     action_name = "" if not for_tracer else "_tracer";
     default_action = getSourceTemplate("seccomp_{:s}{:s}".format(rules_config.getSeccompDefault(for_tracer = for_tracer), action_name)).replace("{syscall_nr}", "0x00000000")
-    if "{default_flag}" in default_action:
-        default_action = default_action.replace("{default_flag}", getSourceTemplate("seccomp_default_flag"))
     
     init_code = init_template.replace("{rules}", "\n".join(code_lines)).replace("{syscall_default_action}", default_action).replace("{instance}", "Client" if not for_tracer else "Tracer" )
     return init_code.split("\n");

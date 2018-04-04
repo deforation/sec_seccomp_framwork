@@ -192,7 +192,7 @@ void start_tracer(){
 
 	struct user_regs_struct regs;
 	pid_t pid;
-	long sc_retcode;
+	long trace_message = -1;
 	int status = 0;
 	int syscall_n = 0;
 
@@ -207,7 +207,7 @@ void start_tracer(){
 	errno = 0;
 	while(1){
 		// Init wait for event
-		ptrace(PTRACE_SYSCALL, pid, 0, 0 );
+		ptrace(PTRACE_EVENT_SECCOMP, pid, 0, 0 );
 
 		// wait for event to happen
 		pid = waitpid(-1, &status, __WALL);
@@ -219,37 +219,32 @@ void start_tracer(){
 		ptrace(PTRACE_GETREGS, pid, 0, &regs );
 		syscall_n = regs.orig_rax;
 
-		// check if it is a seccomp event and modify the system call if we are about to enter it
-		if (status>>8 == (SIGTRAP | (PTRACE_EVENT_SECCOMP<<8))){
-			sc_retcode = ptrace(PTRACE_PEEKUSER, pid, SC_RETCODE, NULL);
-			(void)sc_retcode;
-			// retrieve the ptrace message
-			long trace_message = -1;
-			ptrace(PTRACE_GETEVENTMSG, pid, 0, &trace_message);
+		// retrieve the ptrace message
+		ptrace(PTRACE_GETEVENTMSG, pid, 0, &trace_message);
 
-			// interprete and handle the ptrace event messages
-			bool interfere = false;
-			if (trace_message & PTRACE_DBG_ALLOW){
-				log_debug_action("ALLOW", syscall_n);
-			} else if (trace_message & PTRACE_DBG_TERMINATE){
-				log_debug_action("TERMINATE", syscall_n);
-				kill(pid, SIGSTOP);
-				exit(0);
-			} else if (trace_message & PTRACE_DBG_MODIFY){
-				log_debug_action("MODIFY", syscall_n);
-				interfere = true;
-			} else if (trace_message & PTRACE_DBG_SKIP){
-				log_debug_action("SKIP", syscall_n);
-				invalidateSystemcall(pid);
-			} else if (trace_message & PTRACE_EXECUTE){
-				interfere = true;
-			}
+		// interprete and handle the ptrace event messages
+		bool interfere = false;
+		if (trace_message & PTRACE_DBG_ALLOW){
+			log_debug_action("ALLOW", syscall_n);
+		} else if (trace_message & PTRACE_DBG_TERMINATE){
+			log_debug_action("TERMINATE", syscall_n);
+			kill(pid, SIGSTOP);
+			exit(0);
+		} else if (trace_message & PTRACE_DBG_MODIFY){
+			log_debug_action("MODIFY", syscall_n);
+			interfere = true;
+		} else if (trace_message & PTRACE_DBG_SKIP){
+			log_debug_action("SKIP", syscall_n);
+			invalidateSystemcall(pid);
+			modifyReturnValue(pid, -1);
+		} else if (trace_message & PTRACE_EXECUTE){
+			interfere = true;
+		}
 
-			// if we are on the productive system (no debug)
-			// or modify is called, we run the emulator
-			if (sc_retcode < 0 && interfere == true){
-				performSystemcall(pid, status, syscall_n);
-			}
+		// if we are on the productive system (no debug)
+		// or modify is called, we run the emulator
+		if (interfere == true){
+			performSystemcall(pid, status, syscall_n);
 		}
 	}
 }
