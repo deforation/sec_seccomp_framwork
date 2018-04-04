@@ -443,10 +443,11 @@ void* readData(pid_t pid, int param_register, size_t size){
 	    do {
 	        long val;
 	        char *p;
-	  
+
+	  		errno = 0;
 	        val = ptrace(PTRACE_PEEKTEXT, pid, param_addr, NULL);
-	        if (val == -1) {
-	            fprintf(stderr, "PTRACE_PEEKTEXT error: %s", strerror(errno));
+	        if (val == -1 && errno != 0) {
+	            fprintf(stderr, "PTRACE_PEEKTEXT error: %s\n", strerror(errno));
 	            exit(1);
 	        }
 	        param_addr += sizeof (long);
@@ -490,9 +491,10 @@ char* readTerminatedString(pid_t pid, int param_register){
 	        long val;
 	        char *p;
 	  
+	  		errno = 0;
 	        val = ptrace(PTRACE_PEEKTEXT, pid, param_addr, NULL);
-	        if (val == -1) {
-	            fprintf(stderr, "PTRACE_PEEKTEXT error: %s", strerror(errno));
+	        if (val == -1 && errno != 0) {
+	            fprintf(stderr, "PTRACE_PEEKTEXT error: %s\n", strerror(errno));
 	            exit(1);
 	        }
 	        param_addr += sizeof (long);
