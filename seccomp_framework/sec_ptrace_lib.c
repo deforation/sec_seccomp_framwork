@@ -89,6 +89,7 @@ char *getPidCwd(pid_t pid){
 * Resolved path or NULL if not successfull
 */
 char *getPidRealPath(pid_t pid, const char *string){
+	bool cwd_changed = false;
 	char *pid_cwd = getPidCwd(pid);
 	char *own_cwd = getcwd(NULL, 0);
 
@@ -99,18 +100,24 @@ char *getPidRealPath(pid_t pid, const char *string){
 
 	// change to dir of pid
 	if (chdir(pid_cwd) == -1){
-		return NULL;
+		cwd_changed = true;
 	}
 
 	// perform realpath action
 	char *res = realpath(string, NULL);
 
-	// change back to old cwd
-	chdir(own_cwd);
+	if (cwd_changed == true){
+		// change back to old cwd
+		chdir(own_cwd);
+	}
 
 	// free data
-	free(pid_cwd);
-	free(own_cwd);
+	if (pid_cwd != NULL){
+		free(pid_cwd);
+	} 
+	if (own_cwd != NULL){
+		free(own_cwd);
+	}
 
 	errno = 0;
 	return res;
