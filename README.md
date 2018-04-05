@@ -459,3 +459,12 @@ Before seccomp gets initialized, the sec_main_before function of the application
 If the application tries to execute a system call, it is checked within the kernel against the defined seccomp rules.
 Redirection and modification rules as well as rules with checks on data behind pointers (which is not possible in seccomp itself) are redirected to the tracer. The tracer than performes the action according to the rules and either let the application execute the system call or emulate the system call for it.
 
+## Pending tasks
+The following tasks which are pending are mostly improvements and beautify measurements:
+* Cleanup the generated seccomp rules for the tracer
+* Enhance the error handling in the rule generation script and the file parsers
+* Extend the framework to check file descriptor permissions using the existing rule format for permissions
+* Add more log automation to the code for better error handling while setting up the rules
+* Add support for more architectures (currently limited by the bpf code generation [arch support])
+* Performance improvements so paths are only resolved once for each system call and not for each check.
+* Other pending changes are noted in the source files
