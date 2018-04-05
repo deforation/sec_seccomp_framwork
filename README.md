@@ -550,4 +550,35 @@ void sec_setrlimit(pid_t pid, int resource, struct rlimit *rlim){
 	
 	executeRuleResult(pid, __rule_action, -1, false);
 }
+
+void performSystemcall(pid_t pid, int status, int syscall_n){
+	switch (syscall_n){
+		case SYS_open:
+			{
+				mode_t mode = (mode_t)readInt(pid, PAR3);
+				int flags = (int)readInt(pid, PAR2);
+				char *filename = readTerminatedString(pid, PAR1);
+				sec_open(pid, filename, flags, mode);
+				free(filename);
+			}
+			break;
+		case SYS_setrlimit:
+			{
+				struct rlimit *rlim = readData(pid, PAR2, sizeof(struct rlimit));
+				int resource = (int)readInt(pid, PAR1);
+				sec_setrlimit(pid, resource, rlim);
+				free(rlim);
+			}
+			break;
+		default:
+			{
+				invalidateSystemcall(pid);
+				if (status>>8 == (SIGTRAP | (PTRACE_EVENT_SECCOMP<<8))){
+					printf("Called invalide system call [%d]. Application will be terminated.\n", syscall_n);
+					kill(pid, SIGSTOP);
+					exit(0);
+				}
+			}
+	}
+}
 ```
