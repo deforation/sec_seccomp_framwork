@@ -677,20 +677,21 @@ def generateSeccompRuleCode(rules, comment, for_tracer = False):
             action_name = "" if not for_tracer else "_tracer";
             action_str = getSourceTemplate("seccomp_{:s}{:s}".format(rule.getAction(), action_name)).replace("{syscall_nr}", "SCMP_SYS({:s})".format(rule.getSyscall())).replace("{errorcode}", "EPERM");
 
-            if rule.hasParameterChecks():
-                checks = rule.getParameterChecks();
-                argument_template = getSourceTemplate("seccomp_argument")
+            if rule.getSyscall():
+                if rule.hasParameterChecks():
+                    checks = rule.getParameterChecks();
+                    argument_template = getSourceTemplate("seccomp_argument")
 
-                args = []
-                for check in checks:
-                    arg_str = argument_template.replace("{nr}", str(config_funcdefs.getArgumentNr(rule.getSyscall(), check["field"]) - 1)).replace("{comparator}", comparators[check["operator"]]).replace("{value}", check["value"])
-                    args.append(arg_str)
+                    args = []
+                    for check in checks:
+                        arg_str = argument_template.replace("{nr}", str(config_funcdefs.getArgumentNr(rule.getSyscall(), check["field"]) - 1)).replace("{comparator}", comparators[check["operator"]]).replace("{value}", check["value"])
+                        args.append(arg_str)
 
-                rule_str = argument_rule_template.replace("{syscall_nr}", "SCMP_SYS({:s})".format(rule.getSyscall())).replace("{action}", action_str).replace("{count}", str(len(checks))).replace("{argument}", ",".join(args));
-                code_lines.append(rule_str)
-            else:
-                rule_str = basic_rule_template.replace("{syscall_nr}", "SCMP_SYS({:s})".format(rule.getSyscall())).replace("{action}", action_str);
-                code_lines.append(rule_str)
+                    rule_str = argument_rule_template.replace("{syscall_nr}", "SCMP_SYS({:s})".format(rule.getSyscall())).replace("{action}", action_str).replace("{count}", str(len(checks))).replace("{argument}", ",".join(args));
+                    code_lines.append(rule_str)
+                else:
+                    rule_str = basic_rule_template.replace("{syscall_nr}", "SCMP_SYS({:s})".format(rule.getSyscall())).replace("{action}", action_str);
+                    code_lines.append(rule_str)
 
     return code_lines;
 
@@ -710,22 +711,53 @@ def generateSeccompInitRoutine(seccomp_rules, seccomp_rules_tracer = None):
     for_tracer = False if seccomp_rules_tracer is None else True
 
     # append general rules
+    no_parameter_rules = list(filter(lambda r: not r.hasParameterChecks(), seccomp_rules));
+    parameter_rules = list(filter(lambda r: r.hasParameterChecks(), seccomp_rules));
     for action in ["allow", "terminate", "skip", "modify"]:
-        general_rules = list(filter(lambda r: r.getAction() == action and not r.hasParameterChecks(), seccomp_rules));
-        specific_rules = list(filter(lambda r: r.getAction() == action and r.hasParameterChecks(), seccomp_rules));
+        general_rules = list(filter(lambda r: r.getAction() == action and not r.hasParameterChecks(), no_parameter_rules));
+        specific_rules = list(filter(lambda r: r.getAction() == action and r.hasParameterChecks(), parameter_rules));
 
-        if for_tracer:
-            general_rules_tracer = list(filter(lambda r: r.getAction() == action and not r.hasParameterChecks() and r not in seccomp_rules, seccomp_rules_tracer));
-            code_lines.extend(generateSeccompRuleCode(general_rules_tracer, "// Add general tracer {:s} rules".format(action), for_tracer = for_tracer))
+        #if for_tracer:
+        #    general_rules_tracer = list(filter(lambda r: r.getAction() == action and not r.hasParameterChecks() and r not in seccomp_rules, seccomp_rules_tracer));
+        #    code_lines.extend(generateSeccompRuleCode(general_rules_tracer, "// Add general tracer {:s} rules".format(action), for_tracer = for_tracer))
 
-        code_lines.extend(generateSeccompRuleCode(general_rules,  "// Add general {:s} rules".format(action), for_tracer = for_tracer))
-        code_lines.extend(generateSeccompRuleCode(specific_rules, "// Add specific {:s} rules".format(action), for_tracer = for_tracer))
+        if for_tracer == True:
+            # filter all rules, which are already defined fix for the tracer, add only thos who are missing
+            # The tracer rules have generally no parameter checks, at least there is no system to generate them for the tracer (currently)
+            gen_rules = list(filter(lambda r: next((ref for ref in seccomp_rules_tracer if ref.getSyscall() == r.getSyscall()), None) is None, general_rules))
+            spec_rules = list(filter(lambda r: next((ref for ref in seccomp_rules_tracer if ref.getSyscall() == r.getSyscall()), None) is None, specific_rules))
+            tace_rules = list(filter(lambda r: r.getAction() == action, seccomp_rules_tracer));
+            code_lines.extend(generateSeccompRuleCode(tace_rules, "// Add general tracer {:s} rules".format(action), for_tracer = True))
+            code_lines.extend(generateSeccompRuleCode(spec_rules, "// Add specific {:s} rules".format(action), for_tracer = True))
+            code_lines.extend(generateSeccompRuleCode(gen_rules,  "// Add general {:s} rules".format(action), for_tracer = True))
+        else:
+            code_lines.extend(generateSeccompRuleCode(general_rules,  "// Add general {:s} rules".format(action), for_tracer = False))
+            code_lines.extend(generateSeccompRuleCode(specific_rules, "// Add specific {:s} rules".format(action), for_tracer = False))
 
     # append default rules
     defaults = rules_config.getDefaultActions();
     default_rules = []
     for default in defaults:
         addPermissionRule(default_rules, None, default["syscall"], action = default["action"], primitive = True, _checks = []);
+
+
+    # default rule errors
+    if for_tracer == False:
+        rule_errors = list(filter(lambda r: next((ref for ref in no_parameter_rules if ref.getSyscall() == r.getSyscall()), None) is not None, specific_rules))
+        rule_errors.extend(list(filter(lambda r: next((ref for ref in no_parameter_rules if ref.getSyscall() == r.getSyscall() and ref.getAction() != "modify"), None) is not None, default_rules)))
+        if rule_errors:
+            print("WARNING: There are specific rules defined (system call section) where already a general rule exists.")
+            print("         As a consequence, those specific rules will never be executed.")
+            print("         Please check the following system calls");
+            filtered = set(map(lambda r: r.getSyscall(), rule_errors));
+            for error in filtered:
+                print("         - {:s}".format(error));
+
+    # filter possible unneccessary rules
+    default_rules = list(filter(lambda r: next((ref for ref in no_parameter_rules if ref.getSyscall() == r.getSyscall()), None) is None, default_rules))
+    if for_tracer == True:
+        default_rules = list(filter(lambda r: next((ref for ref in seccomp_rules_tracer if ref.getSyscall() == r.getSyscall()), None) is None, default_rules))
+
     code_lines.extend(generateSeccompRuleCode(default_rules, "// Add default actions for custom system calls", for_tracer = for_tracer))
 
     action_name = "" if not for_tracer else "_tracer";

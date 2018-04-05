@@ -101,9 +101,10 @@ To be able to define actions based on parameter values, the rule design also all
 specific values or change the value of those.
 
 Note, that the tracer needs most likely at least access to the following system calls to be fully operational
- - ptrace, wait4, getpid, socket, connect, 
-   sendto, readlink, kill, exit, exit_group, 
-   write, read, lseek, close, fstat, lstat
+- ptrace, wait4, getpid, socket, 
+  sendto, read, chdir, getcwd, 
+  lseek, lstat, readlink, kill, 
+  exit, exit_group, write, close, connect
 
 
 A normal client application needs at least the following permissions so it is able to startup and terminate without any further logic:
@@ -461,10 +462,11 @@ Redirection and modification rules as well as rules with checks on data behind p
 
 ## Pending tasks
 The following tasks which are pending are mostly improvements and beautify measurements:
-* Cleanup the generated seccomp rules for the tracer
 * Enhance the error handling in the rule generation script and the file parsers
 * Extend the framework to check file descriptor permissions using the existing rule format for permissions
 * Add more log automation to the code for better error handling while setting up the rules
 * Add support for more architectures (currently limited by the bpf code generation [arch support])
-* Performance improvements so paths are only resolved once for each system call and not for each check.
+* Performance improvements so paths are only resolved once for each system call and not for each check
+* Add bpf filter support for more than 255 instructions (current limit is caused by the max jump distance)
+* Add support for || parameter checks in seccomp bpf instead of only && statements
 * Other pending changes are noted in the source files
