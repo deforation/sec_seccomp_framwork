@@ -40,10 +40,10 @@ Depending on the used compiler, a flag has to be set during compilation to add s
 To run the attached test application, perform the following steps:
 1. Download the repository
 2. Change to the Generator directory
-3. Execute the command (python3 SecConfigBuilder.py -o ../seccomp_framework)
-   A message should appear, that all files were generated successfully
-4. Change to the directory with the app.c file and call make to compile the application
-5. Run the application
+3. Execute the command: python3 SecConfigBuilder.py -o ../seccomp_framework
+4. A message should appear, that all files were generated successfully
+5. Change to the directory with the app.c file and call make to compile the application
+6. Run the application
 
 A successfull run should show different test cases and their expected outcome as well as the results.
 
