@@ -470,3 +470,84 @@ The following tasks which are pending are mostly improvements and beautify measu
 * Add bpf filter support for more than 255 instructions (current limit is caused by the max jump distance)
 * Add support for || parameter checks in seccomp bpf instead of only && statements
 * Other pending changes are noted in the source files
+
+## Example rule transformations
+The following examples demonstrate, how the rules are transformed into seccomp and c rules.
+We assume the input configuration:
+```
+[setrlimit]
+default:		terminate
+redirect:		resource == RLIMIT_NPROC && limit->rlim_max > 8: limit->rlim_max => 8,
+			limit->rlim_cur > limit->rlim_max: limit->rlim_cur => limit->rlim_max-1
+skip:			resource == RLIMIT_CPU
+
+[socket]
+default:		terminate
+allow:			domain == AF_UNIX && type == SOCK_STREAM,
+			domain == AF_LOCAL && type == SOCK_STREAM
+			
+[open]
+default:		skip
+redirect:		path dir_ends_with(".dat") => ".txt"
+```
+The Configuration Builder creates the following seccomp instructions for the client.
+```c
+// Add specific allow rules
+sec_seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(socket), 2, SCMP_A0(SCMP_CMP_EQ, AF_LOCAL),SCMP_A1(SCMP_CMP_EQ, SOCK_STREAM));
+sec_seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(socket), 2, SCMP_A0(SCMP_CMP_EQ, AF_UNIX),SCMP_A1(SCMP_CMP_EQ, SOCK_STREAM));
+// Add specific skip rules
+sec_seccomp_rule_add(ctx, SCMP_ACT_ERRNO(EPERM), SCMP_SYS(setrlimit), 1, SCMP_A0(SCMP_CMP_EQ, RLIMIT_CPU));
+// Add general modify rules
+sec_seccomp_rule_add(ctx, SCMP_ACT_TRACE(PTRACE_EXECUTE), SCMP_SYS(open), 0);
+sec_seccomp_rule_add(ctx, SCMP_ACT_TRACE(PTRACE_EXECUTE), SCMP_SYS(setrlimit), 0);
+// Add default actions for custom system calls
+sec_seccomp_rule_add(ctx, SCMP_ACT_KILL, SCMP_SYS(socket), 0);
+```
+On the tracer part of the application, the following output is generated:
+```c
+void sec_open(pid_t pid, const char *filename, int flags, mode_t mode){
+	(void)pid;
+	(void)filename;
+	(void)flags;
+	(void)mode;
+
+	struct sec_rule_result __rule_action;
+	__rule_action.new_value = NULL;
+	__rule_action.size = -1;
+	__rule_action.action = SEC_ACTION_SKIP;
+	
+	{
+		struct sec_rule_result redirect_result = changeStringOnEndMatch(pid, ".dat", filename, strlen(filename)+1, ".txt", true);
+		executeRuleResult(pid, redirect_result, PAR1, false);
+		if (redirect_result.action == SEC_ACTION_MODIFY){
+			__rule_action.action = SEC_ACTION_ALLOW;
+		}
+	}
+	
+	executeRuleResult(pid, __rule_action, -1, false);
+}
+
+void sec_setrlimit(pid_t pid, int resource, struct rlimit *rlim){
+	(void)pid;
+	(void)rlim;
+	(void)resource;
+	
+	struct sec_rule_result __rule_action;
+	__rule_action.new_value = NULL;
+	__rule_action.size = -1;
+	__rule_action.action = SEC_ACTION_TERMINATE;
+	
+	if(resource == RLIMIT_NPROC && rlim->rlim_max > 8){
+		rlim->rlim_max = 8;
+		modifyParameter(pid, PAR2, rlim, sizeof(struct rlimit));
+		__rule_action.action = SEC_ACTION_ALLOW;
+	}
+	if(rlim->rlim_cur > rlim->rlim_max){
+		rlim->rlim_cur = rlim->rlim_max-1;
+		modifyParameter(pid, PAR2, rlim, sizeof(struct rlimit));
+		__rule_action.action = SEC_ACTION_ALLOW;
+	}
+	
+	executeRuleResult(pid, __rule_action, -1, false);
+}
+```
