@@ -36,6 +36,17 @@ Depending on the used compiler, a flag has to be set during compilation to add s
 
 * For gcc, add the compiler flag -lseccomp
 
+### Run the test application
+To run the attached test application, perform the following steps:
+1. Download the repository
+2. Change to the Generator directory
+3. Execute the command (python3 SecConfigBuilder.py -o ../seccomp_framework)
+   A message should appear, that all files were generated successfully
+4. Change to the directory with the app.c file and call make to compile the application
+5. Run the application
+
+A successfull run should show different test cases and their expected outcome as well as the results.
+
 ### Minimum example
 The following is a minimum example for the main applications source file:
 ```c
