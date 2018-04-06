@@ -474,7 +474,7 @@ struct sec_rule_result changeStringValue(const char *new_string){
 */
 void writeLog(int level, char *string){		
 	openlog("sec_seccomp_log", LOG_PID|LOG_CONS, LOG_USER);
-	syslog(level, string);
+	syslog(level, "%s", string);
 	closelog();
 }
 
