@@ -197,7 +197,7 @@ If on the other way, we want to check strings itself, the following functions ho
  - ends_with("string")
 
 There is also a way to perform checks (no modifications) on the path of a file descriptor. Note, that file descriptors generally have no strictly defined path representation, especially if we deal with hardlinks,... 
-The runctions resolve the path based on the directory "/proc/pid/fd/fdnum
+The functions resolve the path based on the directory "/proc/pid/fd/fdnum"
  - fd_path_starts_with("path") and
  - fd_path_ends_with("path")
 
