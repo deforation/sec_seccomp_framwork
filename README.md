@@ -465,11 +465,12 @@ The following tasks which are pending are mostly improvements and beautify measu
 * Enhance the error handling in the rule generation script and the file parsers
 * Extend the framework to check file descriptor permissions using the existing rule format for permissions
 * Add more log automation to the code for better error handling while setting up the rules
-* Add support for more architectures (currently limited by the bpf code generation [arch support])
+* Add support for more architectures (currently limited by the bpf code generation [arch support] AUDIT_ARCH_X86_64)
 * Performance improvements so paths are only resolved once for each system call and not for each check
 * Add bpf filter support for more than 255 instructions (current limit is caused by the max jump distance)
 * Add support for || parameter checks in seccomp bpf instead of only && statements
 * Other pending changes are noted in the source files
+* Add binary search within large seccomp bpf programs to improve the performance
 
 ## Example rule transformations
 The following examples demonstrate, how the rules are transformed into seccomp and c rules.
