@@ -755,6 +755,7 @@ def generateSeccompInitRoutine(seccomp_rules, seccomp_rules_tracer = None):
 
     # filter possible unneccessary rules
     default_rules = list(filter(lambda r: next((ref for ref in no_parameter_rules if ref.getSyscall() == r.getSyscall()), None) is None, default_rules))
+    default_rules = list(filter(lambda r: r.getAction() != rules_config.getSeccompDefault(for_tracer = for_tracer), default_rules))
     if for_tracer == True:
         default_rules = list(filter(lambda r: next((ref for ref in seccomp_rules_tracer if ref.getSyscall() == r.getSyscall()), None) is None, default_rules))
 
