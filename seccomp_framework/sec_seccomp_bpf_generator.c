@@ -144,6 +144,7 @@ int addAction(seccomp_ctx ctx, seccomp_instruction action, accumulator_value loa
 	entry->seccomp_action = seccomp_action;
 	entry->next = NULL;
 	entry->previous = NULL;
+	entry->systemcall_nr = ctx->systemcall_nr;
 
 	seccomp_ctx last = ctx;
 	while (last->next != NULL){
@@ -741,6 +742,7 @@ seccomp_ctx sec_seccomp_init(uint32_t default_seccomp_action){
 	ctx->seccomp_action = default_seccomp_action;
 	ctx->code_line = -1;
 	ctx->is_final = false;
+	ctx->systemcall_nr = -1;
 
 	addArchCheck(ctx);
 
@@ -759,9 +761,16 @@ seccomp_ctx sec_seccomp_init(uint32_t default_seccomp_action){
 * ...: variadic amount of seccomp parameter checks
 */
 void sec_seccomp_rule_add(seccomp_ctx ctx, uint32_t action, int syscall_nr, uint32_t argc, ...){
-	// check the system call
-	addParameterLoad(ctx, SYSTEMCALL);
-	addParameterCheck(ctx, SCMP_CMP_EQ, syscall_nr, action);
+	bool rule_valid = false;
+
+	// check the system call if we have not already checked its number
+	// or if we have no parameters to check
+	if (ctx->systemcall_nr != syscall_nr || argc <= 0){
+		addParameterLoad(ctx, SYSTEMCALL);
+		addParameterCheck(ctx, SCMP_CMP_EQ, syscall_nr, action);
+		ctx->systemcall_nr = syscall_nr;
+		rule_valid = true;
+	}
 
 	va_list params;
 	va_start(params, argc);
@@ -795,9 +804,12 @@ void sec_seccomp_rule_add(seccomp_ctx ctx, uint32_t action, int syscall_nr, uint
 
 		addParameterLoad(ctx, param);
 		addParameterCheck(ctx, comparison.op, comparison.datum_a, action);
+		rule_valid = true;
 	}
 
-	addRuleEnd(ctx);
+	if (rule_valid == true){
+		addRuleEnd(ctx);
+	}
 
 	va_end(params);
 }

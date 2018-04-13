@@ -98,7 +98,8 @@ typedef struct _seccomp_ctx {
 	uint32_t value;
 	uint32_t seccomp_action;
 	size_t code_line;
-
+	
+	int systemcall_nr;
 	accumulator_value accumulator_value;
 
 	int is_final;
