@@ -48,30 +48,18 @@
 #include <syslog.h>
 #include <string.h>
 #include <errno.h>
+#include <unistd.h>
 
 #include "sec_ptrace_lib.h"
 #include "sec_syscall_emulator.h"
 #include "sec_seccomp_rules.h"
 
+#ifndef SYS_SECCOMP
+#define SYS_SECCOMP 1
+#endif
+
 extern int errno;
 
-
-/*
-* Description:
-* Callback handler for the signal just printing the
-* received signal
-*
-* Parameter:
-* signum: integer for the signal number
-*/
-void signal_callback_handler_tracer(int signum)
-{
-   printf("Caught signal %d\n",signum);
-
-   // Cleanup and close up stuff here
-   // Terminate program
-   exit(signum);
-}
 
 /*
 * Description:
@@ -82,11 +70,16 @@ void signal_callback_handler_tracer(int signum)
 * si: siginfo_t containing information about the signal
 * threadContext: informations about the thread
 */
-static void catchViolation(int sig, siginfo_t* si, void* threadContext)
+static void catch_violation(int sig, siginfo_t* si, void* threadContext)
 {
   (void)threadContext;
-  printf("Tracer: Attempted banned syscall number [%d] see doc/Seccomp.md for more information [%d]\n", si->si_syscall, sig);
-  exit(sig);
+
+  if (si->si_code == SYS_SECCOMP){
+	  char errormsg[255];
+	  sprintf(errormsg, "Tracer: Attempted banned syscall with number [%d].\n", si->si_syscall);
+	  write(STDOUT_FILENO, errormsg, strlen(errormsg));
+	  exit(sig);
+	}
 }
 
 /*
@@ -94,9 +87,7 @@ static void catchViolation(int sig, siginfo_t* si, void* threadContext)
 * Setup error handling
 */
 void init_error_handling(){
-	signal(SIGSYS, signal_callback_handler_tracer);	
-
-	struct sigaction sa = { .sa_sigaction = catchViolation, .sa_flags = SA_SIGINFO };
+	struct sigaction sa = { .sa_sigaction = catch_violation, .sa_flags = SA_SIGINFO };
 	if (sigaction(SIGSYS, &sa, NULL)){
 		printf("sigaction(SIGSYS) -> [%s]\n", strerror(errno));
 	}

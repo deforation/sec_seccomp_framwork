@@ -138,7 +138,7 @@ def getSourceTemplate(template):
 # Return:
 # The rules are added to the passed parameter lists
 def fetchBasicSeccompRules(seccomp_rules, seccomp_rules_tracer):
-    actions = ["allow", "terminate", "skip", "modify"];
+    actions = ["allow", "terminate", "skip", "modify", "trap"];
 
     for action in actions:
         systemcalls = rules_config.getSystemcallsForAction(action);
@@ -713,7 +713,7 @@ def generateSeccompInitRoutine(seccomp_rules, seccomp_rules_tracer = None):
     # append general rules
     no_parameter_rules = list(filter(lambda r: not r.hasParameterChecks(), seccomp_rules));
     parameter_rules = list(filter(lambda r: r.hasParameterChecks(), seccomp_rules));
-    for action in ["allow", "terminate", "skip", "modify"]:
+    for action in ["allow", "terminate", "skip", "modify", "trap"]:
         general_rules = list(filter(lambda r: r.getAction() == action and not r.hasParameterChecks(), no_parameter_rules));
         specific_rules = list(filter(lambda r: r.getAction() == action and r.hasParameterChecks(), parameter_rules));
 
