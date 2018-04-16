@@ -32,7 +32,7 @@ To use the framework, the following steps must be performed:
 6. Write rules and modify/extend the system call configuration file if required.
 7. Generate the seccomp and tracer rule checks with the python script "SecConfigBuilder.py"
 8. Copy the generated files into the directory "seccomp_framework" or let the script generate it directly into it.
-9. Compile the application (main file is now seclib.c) [all framework files have to be linked]
+9. Compile the application [all framework files have to be linked]
 
 These 9 easy steps are everything it needs to configure and use the framework.
 Depending on the used compiler, a flag has to be set during compilation to add seccomp support.
