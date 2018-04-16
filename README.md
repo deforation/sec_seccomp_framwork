@@ -18,6 +18,10 @@ The c-part of the framework requires:
 * currently: x86 or x64 structure
 * recommended: kernel version > 4.8
 
+In the debug mode, seccomp will be initialized with the flag SECCOMP_FILTER_FLAG_LOG,
+which automatically logs all seccomp actions under "/proc/sys/kernel/seccomp/actions_logged".
+Note, that this feature is only available with a kernel version >= 4.14.
+
 ## Usage
 To use the framework, the following steps must be performed:
 1. Download the respository
