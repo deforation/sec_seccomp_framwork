@@ -124,7 +124,7 @@ int sec_main_after(int argc, char **argv){
 	printf(" ** Try to read a file in a directory where create is disallowed and read allowed. Should be possible.\n");
 	readFile("./demo_files/write_yes_create_no/existing.txt", "r+");
 
-	printf(" ** Try to read a file with the ending .txt. Should redirected to the .dat file.\n");
+	printf(" ** Try to read a file with the ending .dat. Should redirected to the .txt file.\n");
 	readFile("./demo_files/filechange/test.dat", "r");
 
 	// getcwd and chdir test

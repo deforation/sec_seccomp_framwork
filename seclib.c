@@ -58,79 +58,6 @@
 int is_tracer_present(void);
 char *get_application_path(pid_t pid);
 
-/*
-* Description: 
-* Defines the main before routine which is called at the beginning
-* of the client application life time cycle.
-* As long as its use is defined within the main application
-*
-* Parameters:
-* argc: number of arguments
-* argv: arguments
-*
-* Returns:
-* Exit message
-*/
-int main_before(int argc, char **argv){
-	(void)argc;
-	(void)argv;
-
-	#ifdef SEC_MAIN_BEFORE
-		return sec_main_before(argc, argv);
-	#else 
-		return EXIT_SUCCESS;
-	#endif
-}
-
-
-/*
-* Description: 
-* Defines the main after routine which is called after the 
-* initialization of seccomp. This routine starts
-* the main application
-*
-* Parameters:
-* argc: number of arguments
-* argv: arguments
-*
-* Returns:
-* Exit message
-*/
-int main_after(int argc, char **argv){
-	(void)argc;
-	(void)argv;
-
-	#ifdef SEC_MAIN_AFTER
-		return sec_main_after(argc, argv);
-	#else
-		return EXIT_FAILURE;
-	#endif
-}
-
-/*
-* Description: 
-* Starts the tracer part of the application
-*/
-void run_tracer(){
-	start_tracer();
-}
-
-
-/*
-* Description: 
-* Initializes the client and runs the main application
-*
-* Parameters:
-* argc: number of arguments
-* argv: arguments
-*
-* Returns:
-* Exit message
-*/
-int run_client(int argc, char **argv){
-	init_client();
-	return main_after(argc, argv);
-}
 
 /*
 * Description: 
@@ -240,7 +167,7 @@ int run_seccomp_framework(int argc, char **argv, sec_main_function before, sec_m
 			ptrace(PTRACE_TRACEME, 0, 0, 0);
 			exit_state = execvp(argv[0], argv);
 		} else {
-			run_tracer();
+			start_tracer();
 		}
 	} else {
 		// Run user main before
