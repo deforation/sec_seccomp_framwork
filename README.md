@@ -110,12 +110,20 @@ Note, that the tracer needs most likely at least access to the following system 
 A normal client application needs at least the following permissions so it is able to startup and terminate without any further logic:
  - exit, exit_group, write, read
 
+Note that the actions have the following behaviour:
+ - terminate: Terminates the application
+ - skip: Does not run the system call. Errno is set to EPERM instead. (Only in productive mode)
+         In debug mode, -1 is returned by the system call instead because errno can not easily be set by the tracer.
+ - allow: Executes the system call.
+ - trap: Calls the trap function which terminates the application and prints the causing system call number.
+ - modify: Reroutes the system call to the tracer which can emulate it (modify the return value), perform deep inspection on pointer arguments, modify arguments or let the application execute it.
+
 The rule file itself has the following structure (or see the example rule file in the repository):
 ```
 [General]
 debug:     		True or False
-default_action:		{action} (trap, terminate, skip, allow or modify)
-default_action_tracer:	{action} (allow, terminate)
+default_action:		{action} (allow, terminate, trap, skip or modify)
+default_action_tracer:	{action} (allow, terminate, trap, skip)
 
 # defines which systemcalls shoud strictly be allowed, forbidden,...
 syscall {action}:		list of systemcalls like (open, write, ...)
@@ -136,7 +144,7 @@ The following constructs are supported:
 Keep in mind, that each rule can only apper once, but it is possible
 to specify multiple checks / actions by separating them with a comma
 
-- {action} 		represents an action like (terminate, allow or skip)
+- {action} 		represents an action like (terminate, allow, skip, trap)
 
 - {c-expression} 	defines nearly any kind of c expression.
                   	example: domain == AF_UNIX
@@ -404,7 +412,7 @@ void sec_fcntl(int fd, int cmd){
 The framework offers the flag "debug" within the "General" section of the rule configuration file.
 Once the flag is set, seccomp rules like (terminate, allow and skip) wont be executed by seccomp itself.
 Instead, all requests are redirected to the tracer which offers the possibility to print debug information.
-To find why an application may terminate, which is likely if not all system calls have been allowed which should be able to use by the application. Second, all defined debug sections within the system call configuration file
+To find why an application may terminate, which is likely if not all system calls have been allowed which should be able to use by the application. Second, all defined debug sections within the system call configuration file. In some cases, when the default rule is set to terminate for the tracer or in the productive environment for the client, it is hard to detect which system call lead to termination. Therefore it may be useful to set the default action to trap. As a result, the applicaiton will on termination display, which system call lead to termination.
 
 For all logging purposes, the framework uses the syslog module. On Debian, all messages are written to /var/log/syslog
 The output may look like this:
