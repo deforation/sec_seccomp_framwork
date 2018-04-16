@@ -733,7 +733,6 @@ void sec_seccomp_export_bpf(seccomp_ctx ctx, int fd){
 					break;
 				case SCMP_ACT_ALLOW:
 					strcpy(act, "SECCOMP_RET_ALLOW");
-					printf("allow\n");
 					break;
 				default:
 					strcpy(act, "INVALID_CHECK");
