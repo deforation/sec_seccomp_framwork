@@ -63,10 +63,12 @@
 *
 ******************************************************************/
 
-#include <seccomp.h>
 #include "sec_seccomp_bpf_generator.h"
+#include <seccomp.h>
 #include <linux/seccomp.h>
+#include <sys/syscall.h>
 #include <linux/filter.h>
+#include <unistd.h>
 #include <stdarg.h>
 #include <string.h>
 #include <stddef.h>
@@ -112,6 +114,7 @@ void freeSeccompContext(seccomp_ctx ctx);
 struct sock_fprog buildFilterProg(seccomp_ctx ctx);
 struct sock_filter buildFilter(seccomp_ctx pt);
 
+int sec_seccomp_load_with_flags(seccomp_ctx ctx, int flags);
 
 
 /*
@@ -612,17 +615,58 @@ void freeSeccompContext(seccomp_ctx ctx){
 * -1 if it fails to initialize the filter
 */
 int sec_seccomp_load(seccomp_ctx ctx){
+	return sec_seccomp_load_with_flags(ctx, SECCOMP_FILTER_FLAG_TSYNC);
+}
+
+/*
+* Description:
+* Generates and loads the seccomp bpf program
+* at the same time, the context object is freed (destroyed)
+* adds the flag SECCOMP_FILTER_FLAG_LOG, so all actions are logged within
+* /proc/sys/kernel/seccomp/actions_logged
+* 
+* Supported after Linux 4.14 (http://man7.org/linux/man-pages/man2/seccomp.2.html)
+*
+* Parameters:
+* ctx: filter context
+*
+* Return:
+* return value of the prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER,...) instruction
+* -1 if it fails to initialize the filter
+*/
+int sec_seccomp_load_debug(seccomp_ctx ctx){
+	#ifdef SECCOMP_FILTER_FLAG_LOG
+		return sec_seccomp_load_with_flags(ctx, SECCOMP_FILTER_FLAG_TSYNC |  SECCOMP_FILTER_FLAG_LOG );
+	#else
+		return sec_seccomp_load_with_flags(ctx, SECCOMP_FILTER_FLAG_TSYNC);
+	#endif
+}
+
+
+/*
+* Description:
+* Generates and loads the seccomp bpf program
+* at the same time, the context object is freed (destroyed)
+*
+* Parameters:
+* ctx: filter context
+* flags: flags for the seccomp command
+*
+* Return:
+* return value of the prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER,...) instruction
+* -1 if it fails to initialize the filter
+*/
+int sec_seccomp_load_with_flags(seccomp_ctx ctx, int flags){
 	finalizeSeccompRules(ctx);
 
 	struct sock_fprog prog = buildFilterProg(ctx);
-
 	freeSeccompContext(ctx);
 
-	int result = prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, &prog);
+	int result = syscall(SYS_seccomp, SECCOMP_SET_MODE_FILTER, flags, &prog, NULL); 
+
 	free(prog.filter);
 	return result;
 }
-
 
 /*
 * Description:

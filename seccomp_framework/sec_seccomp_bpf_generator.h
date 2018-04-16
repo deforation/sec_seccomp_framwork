@@ -111,5 +111,6 @@ seccomp_ctx sec_seccomp_init(uint32_t default_seccomp_action);
 void sec_seccomp_rule_add(seccomp_ctx ctx, uint32_t action, int syscall_nr, uint32_t argc, ...);
 void sec_seccomp_export_bpf(seccomp_ctx ctx, int fd);
 int sec_seccomp_load(seccomp_ctx ctx);
+int sec_seccomp_load_debug(seccomp_ctx ctx);
 
 #endif //SEC_SECCOMP_BPF_GENERATOR_H
