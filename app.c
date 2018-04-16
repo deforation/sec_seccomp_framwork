@@ -1,7 +1,8 @@
 // include the sec_client module
-#include "seccomp_framework/sec_client.h"
+#include "seclib.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <stddef.h>
 #include <unistd.h>
@@ -14,16 +15,15 @@
 #include <sys/resource.h>
 #include <pthread.h>
 #include <linux/unistd.h>
+#include <limits.h>
 #include <sys/syscall.h>
 #include <errno.h>
 
 extern int errno;
 
-// define which main functions are used
-// MAIN_BEFORE is called before seccomp is activated
-// MAIN_AFTER is called after seccomp is activated
-#define SEC_MAIN_BEFORE
-#define SEC_MAIN_AFTER
+// prototypes
+int sec_main_before(int argc, char **argv);
+int sec_main_after(int argc, char **argv);
 
 
 void readFile(char *path, char *access){
@@ -76,6 +76,19 @@ void createFile(char *path){
 	}
 
 	printf("---------END---------\n\n");
+}
+
+/*
+* The main function has no other logic than starting
+* the sec_seccomp_framework.
+*
+* The first argument is the number of arguments
+* The second argument are the arguments
+* The third argument is the function which should be executed before seccomp is initialized
+* The fourth argument is the function which should be executed after seccomp is initialized
+*/
+int main(int argc, char **argv){
+	return run_seccomp_framework(argc, argv, sec_main_before, sec_main_after);
 }
 
 int sec_main_before(int argc, char **argv){

@@ -25,20 +25,27 @@ Note, that this feature is only available with a kernel version >= 4.14.
 ## Usage
 To use the framework, the following steps must be performed:
 1. Download the respository
-2. Rename the main function (int main ...) of the application to (int sec_main_after ...)
-3. Optional: Add a function (int sec_main_before ...) if needed, to perform privileged actions
-4. Include the header file "seccomp_framework/sec_client.h"
-5. Create the defines for the used main functions (#define SEC_MAIN_BEFORE, #define SEC_MAIN_AFTER)
-6. Open seclib.c and add an include for the main .c file of your application (#include "your c file.c")
-7. Write rules and modify/extend the system call configuration file if required.
-8. Generate the seccomp and tracer rule checks with the python script "SecConfigBuilder.py"
-9. Copy the generated files into the directory "seccomp_framework" or let the script generate it directly into it.
-10. Compile the application (main file is now seclib.c) [all framework files have to be linked]
+2. Rename the main function (int main ...) of the application to (int sec_main_after) or something else
+3. Optional: Add a main function (int sec_main_before ...) if needed, to perform privileged actions
+4. Include the header file "seclib.h"
+5. Create a new main function and call: return run_seccomp_framework(argc, argv, sec_main_before, sec_main_after);
+6. Write rules and modify/extend the system call configuration file if required.
+7. Generate the seccomp and tracer rule checks with the python script "SecConfigBuilder.py"
+8. Copy the generated files into the directory "seccomp_framework" or let the script generate it directly into it.
+9. Compile the application (main file is now seclib.c) [all framework files have to be linked]
 
-These 10 easy steps are everything it needs to configure and use the framework.
+These 9 easy steps are everything it needs to configure and use the framework.
 Depending on the used compiler, a flag has to be set during compilation to add seccomp support.
 
 * For gcc, add the compiler flag -lseccomp
+
+Note: Step 5 is the main call which starts the whole seccomp framework.
+The function call consists of 4 parameters:
+* argc: Number of arguments
+* argv: Arguments
+* sec_main_after: Main function which should be executed before seccomp is initialized
+* sec_main_after: Main function which should be executed after seccomp is initialized
+sec_main_after and sec_main_before can have any name. It is only necessary that they have the the following type: typedef int (*sec_main_function)(int, char **);
 
 ### Run the test application
 To run the attached test application, perform the following steps:
@@ -55,10 +62,15 @@ A successfull run should show different test cases and their expected outcome as
 The following is a minimum example for the main applications source file:
 ```c
 #include <stdio.h>
-#include "seccomp_framework/sec_client.h"
+#include "seclib.h"
 
-#define SEC_MAIN_BEFORE
-#define SEC_MAIN_AFTER
+// function prototypes
+int sec_main_before(int argc, char **argv);
+int sec_main_after(int argc, char **argv);
+
+int main(int argc, char **argv){
+	return run_seccomp_framework(argc, argv, sec_main_before, sec_main_after);
+}
 
 int sec_main_before(int argc, char **argv){
 	(void)argc;
@@ -77,23 +89,6 @@ int sec_main_after(int argc, char **argv){
 
 	return EXIT_SUCCESS;
 }
-```
-
-In the file "seclib.c" the specified line has to be modified so the applications c-file is included (see extract below).
-```c
-#include <sys/ptrace.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <limits.h>
-#include <string.h>
-
-#include "seccomp_framework/sec_client.h"
-#include "seccomp_framework/sec_tracer.h"
-
-#include "app.c"	 // CHANGE TO YOUR MAIN .C FILE
 ```
 
 ## Rule configuration scheme

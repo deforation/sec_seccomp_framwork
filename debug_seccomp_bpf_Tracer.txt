@@ -1,0 +1,70 @@
+Seccomp BPF Output for 40 statements
+------------------------------
+
+BPF_STMT(BPF_LD | BPF_W | BPF_ABS, (offsetof(struct seccomp_data, arch)),
+BPF_JMP(BPF_JMP | BPF_JEQ | BPF_K, 3221225534, 0, 36),
+
+BPF_STMT(BPF_LD | BPF_W | BPF_ABS, (offsetof(struct seccomp_data, nr)),
+BPF_JMP(BPF_JMP | BPF_JEQ | BPF_K, 101, 35, 0),
+
+BPF_JMP(BPF_JMP | BPF_JEQ | BPF_K, 61, 34, 0),
+
+BPF_JMP(BPF_JMP | BPF_JEQ | BPF_K, 39, 33, 0),
+
+BPF_JMP(BPF_JMP | BPF_JEQ | BPF_K, 41, 32, 0),
+
+BPF_JMP(BPF_JMP | BPF_JEQ | BPF_K, 44, 31, 0),
+
+BPF_JMP(BPF_JMP | BPF_JEQ | BPF_K, 0, 30, 0),
+
+BPF_JMP(BPF_JMP | BPF_JEQ | BPF_K, 80, 29, 0),
+
+BPF_JMP(BPF_JMP | BPF_JEQ | BPF_K, 79, 28, 0),
+
+BPF_JMP(BPF_JMP | BPF_JEQ | BPF_K, 5, 27, 0),
+
+BPF_JMP(BPF_JMP | BPF_JEQ | BPF_K, 8, 26, 0),
+
+BPF_JMP(BPF_JMP | BPF_JEQ | BPF_K, 6, 25, 0),
+
+BPF_JMP(BPF_JMP | BPF_JEQ | BPF_K, 2, 24, 0),
+
+BPF_JMP(BPF_JMP | BPF_JEQ | BPF_K, 89, 23, 0),
+
+BPF_JMP(BPF_JMP | BPF_JEQ | BPF_K, 62, 22, 0),
+
+BPF_JMP(BPF_JMP | BPF_JEQ | BPF_K, 60, 21, 0),
+
+BPF_JMP(BPF_JMP | BPF_JEQ | BPF_K, 231, 20, 0),
+
+BPF_JMP(BPF_JMP | BPF_JEQ | BPF_K, 1, 19, 0),
+
+BPF_JMP(BPF_JMP | BPF_JEQ | BPF_K, 3, 18, 0),
+
+BPF_JMP(BPF_JMP | BPF_JEQ | BPF_K, 42, 17, 0),
+
+BPF_JMP(BPF_JMP | BPF_JEQ | BPF_K, 72, 0, 2),
+BPF_STMT(BPF_LD | BPF_W | BPF_ABS, (offsetof(struct seccomp_data, args[1])),
+BPF_JMP(BPF_JMP | BPF_JEQ | BPF_K, 3, 14, 0),
+
+BPF_STMT(BPF_LD | BPF_W | BPF_ABS, (offsetof(struct seccomp_data, nr)),
+BPF_JMP(BPF_JMP | BPF_JEQ | BPF_K, 97, 12, 0),
+
+BPF_JMP(BPF_JMP | BPF_JEQ | BPF_K, 72, 0, 2),
+BPF_STMT(BPF_LD | BPF_W | BPF_ABS, (offsetof(struct seccomp_data, args[1])),
+BPF_JMP(BPF_JMP | BPF_JEQ | BPF_K, 1, 8, 0),
+
+BPF_STMT(BPF_LD | BPF_W | BPF_ABS, (offsetof(struct seccomp_data, nr)),
+BPF_JMP(BPF_JMP | BPF_JEQ | BPF_K, 160, 0, 2),
+BPF_STMT(BPF_LD | BPF_W | BPF_ABS, (offsetof(struct seccomp_data, args[0])),
+BPF_JMP(BPF_JMP | BPF_JEQ | BPF_K, 0, 4, 0),
+
+BPF_STMT(BPF_LD | BPF_W | BPF_ABS, (offsetof(struct seccomp_data, nr)),
+BPF_JMP(BPF_JMP | BPF_JEQ | BPF_K, 32, 3, 0),
+
+BPF_JMP(BPF_JMP | BPF_JEQ | BPF_K, 96, 2, 0),
+
+BPF_JMP(BPF_JMP | BPF_JEQ | BPF_K, 160, 1, 0),
+
+BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_KILL),
+BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),

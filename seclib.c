@@ -5,7 +5,8 @@
 *                  / / |   ||   || | | |
 *                 /___||_|_||_|_||__/_/ 
 *                      
-* This module contains the main function to start the application
+* This module contains the main function to initialize and start
+* the seccomp framework.
 * At the beginning, the application performs a fork
 * the parent process becomes the tracer and the child
 * process becomes the tracee.
@@ -25,13 +26,17 @@
 * seccomp and the defined rules within the tracer.
 *
 * -----------------------------------------------------------------
-* Version: 1.0
+* Version: 1.1
 * -----------------------------------------------------------------
+* 16.04.2018:		schwerem		Changed logic so the framework
+*									can be run as a command so it 
+*									does not overwrite the main function
 * 01.04.2018:       schwerem        Version 1.0 implemented
 * -----------------------------------------------------------------
 *
 ******************************************************************/
 
+#include "seclib.h"
 #include <sys/ptrace.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -44,12 +49,14 @@
 #include "seccomp_framework/sec_client.h"
 #include "seccomp_framework/sec_tracer.h"
 
-#include "app.c"
-
 // Some macros for easy readibility
 #define IS_CHILD_PROC(pid) 	pid==0
 #define true 1
 #define false 0
+
+// prototypes
+int is_tracer_present(void);
+char *get_application_path(pid_t pid);
 
 /*
 * Description: 
@@ -65,6 +72,9 @@
 * Exit message
 */
 int main_before(int argc, char **argv){
+	(void)argc;
+	(void)argv;
+
 	#ifdef SEC_MAIN_BEFORE
 		return sec_main_before(argc, argv);
 	#else 
@@ -87,6 +97,9 @@ int main_before(int argc, char **argv){
 * Exit message
 */
 int main_after(int argc, char **argv){
+	(void)argc;
+	(void)argv;
+
 	#ifdef SEC_MAIN_AFTER
 		return sec_main_after(argc, argv);
 	#else
@@ -130,7 +143,7 @@ int run_client(int argc, char **argv){
 * Returns:
 * Path to the application (needs to be freed)
 */
-char *getApplicationPath(pid_t pid){
+char *get_application_path(pid_t pid){
 	char *path = malloc(PATH_MAX);
 
 	sprintf(path, "/proc/%d/exe", pid);
@@ -175,8 +188,8 @@ int is_tracer_present()
 
             // check if the debugger is the same executable
             if (tracer_present){
-            	char *tracer = getApplicationPath(pid);
-            	char *app = getApplicationPath(getpid());
+            	char *tracer = get_application_path(pid);
+            	char *app = get_application_path(getpid());
 
             	if (strcmp(tracer, app) == 0){
             		tracer_present = true;
@@ -201,10 +214,21 @@ int is_tracer_present()
 * the child process let it self be attached to a debugger / tracer
 * in the second launch, the client application is launched
 *
+* the before function will be executed before seccomp is initialized
+* the after function will be executed after seccomp is initalized
+* It is not necessary to pass a function when it is not used.
+* So NULL is a valid value, which means, that the function call will 
+*
+* Parameters:
+* argc: Number of arguments
+* argv: Arguments
+* before: defines the function to be called before seccomp is initialized
+* after: defines the functio to be called after seccomp is initialized
+*
 * Returns:
 * Exit message
 */
-int main(int argc, char **argv){
+int run_seccomp_framework(int argc, char **argv, sec_main_function before, sec_main_function after){
 	int exit_state = 0;
 	(void)argv;
 
@@ -220,12 +244,18 @@ int main(int argc, char **argv){
 		}
 	} else {
 		// Run user main before
-		if ((exit_state = main_before(argc, argv)) != EXIT_SUCCESS){
-			return exit_state;
+		if (before != NULL){
+			if ((exit_state = before(argc, argv)) != EXIT_SUCCESS){
+				return exit_state;
+			}
 		}
 
+		init_client();
+
 		// run the user main after (seccomp is now initialized)
-		exit_state = run_client(argc, argv);
+		if (after != NULL){
+			exit_state = after(argc, argv);
+		}
 	}
 	return exit_state;
 }

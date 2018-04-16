@@ -5,7 +5,8 @@
 *                  / / |   ||   || | | |
 *                 /___||_|_||_|_||__/_/ 
 *                      
-* This module contains the main function to start the application
+* This module contains the main function to initialize and start
+* the seccomp framework.
 * At the beginning, the application performs a fork
 * the parent process becomes the tracer and the child
 * process becomes the tracee.
@@ -25,8 +26,11 @@
 * seccomp and the defined rules within the tracer.
 *
 * -----------------------------------------------------------------
-* Version: 1.0
+* Version: 1.1
 * -----------------------------------------------------------------
+* 16.04.2018:		schwerem		Changed logic so the framework
+*									can be run as a command so it 
+*									does not overwrite the main function
 * 01.04.2018:       schwerem        Version 1.0 implemented
 * -----------------------------------------------------------------
 *
@@ -35,9 +39,7 @@
 #ifndef SECLIB_H
 #define SECLIB_H
 
-extern int sec_main_before(int argc, char **argv);
-extern int sec_main_after(int argc, char **argv);
-int is_tracer_present(void);
-char *getApplicationPath(pid_t pid);
+typedef int (*sec_main_function)(int, char **);
+int run_seccomp_framework(int argc, char **argv, sec_main_function before, sec_main_function after);
 
 #endif  //SECLIB_H
