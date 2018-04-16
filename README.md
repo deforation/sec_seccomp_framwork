@@ -62,6 +62,7 @@ A successfull run should show different test cases and their expected outcome as
 The following is a minimum example for the main applications source file:
 ```c
 #include <stdio.h>
+#include <stdlib.h>
 #include "seclib.h"
 
 // function prototypes
