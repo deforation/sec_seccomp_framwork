@@ -145,13 +145,25 @@
 // Section-Start: Includes
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <time.h>
+// Section-End
 
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/time.h>
-#include <sys/resource.h>
+
+/*
+* Defines custom functions and data structures
+* which are taken over to the generated file
+*/
+// Section-Start: CustomFunctions
+int get_random_value(){
+	static int randval = 0;
+	
+	// we wont expose the real time to the calling application, so we add a random value on top of it
+	if (randval == 0){
+		srand(time(0));
+		randval = (int)rand();
+	}
+
+	return ++randval;
+}
 // Section-End
 
 
@@ -270,15 +282,9 @@ void sec_setrlimit(int resource, struct rlimit *rlim){
 * set_group[tz]:		timezone
 */
 void sec_gettimeofday(__OUT struct timeval *tv, __OUT struct timezone *tz){
-	static int randval = 0;
 	int retval = gettimeofday(tv, tz);
-	
-	// we wont expose the real time to the calling application, so we add a random value on top of it
-	if (randval == 0){
-		srand(time(0));
-		randval = (int)rand();
-	}
-	srand(++randval);
+
+	srand(get_random_value());
 	float offset = (float)rand() - RAND_MAX/2;
 	tv->tv_sec += (int)(offset / RAND_MAX * 20.0);
 

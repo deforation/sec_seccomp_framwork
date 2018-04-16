@@ -36,10 +36,11 @@ from libs.SecRegexBuilder import SecRegexBuilder
 
 # defines the code section types
 class Section(Enum):
-	includes 	 = 1
-	macros 		 = 2
-	secfunctions = 3
-	groups 		 = 4
+	includes 	 	= 1
+	macros 		 	= 2
+	secfunctions 	= 3
+	groups 		 	= 4
+	customfunctions = 5
 
 # defines the parse section types
 class ParseSection(Enum):
@@ -64,6 +65,12 @@ class CParser:
 		self.sections = self.__loadSections()
 		self.sections[Section.secfunctions] = self.__parseSecFunctions(self.sections[Section.secfunctions])
 		self.sections[Section.groups] = self.__collectParameterGroups(self.sections[Section.secfunctions])
+
+	def getCustomFunctions(self):
+		return self.sections[Section.customfunctions]["raw"];
+
+	def getIncludes(self):
+		return self.sections[Section.includes]["raw"];
 
 	# returns if the field is primitive (not a pointer)
 	def isFieldPrimitive(self, syscall, field):
@@ -202,8 +209,8 @@ class CParser:
 	# reads the soruce and splits it into their sections
 	# return: Dictionary of the content groups with an array for all code lines
 	def __loadSections(self):
-		sections = {"includes": Section.includes, "macros": Section.macros, "secfunctions": Section.secfunctions}
-		content = {Section.includes: {"raw": []}, Section.macros: {"raw": []}, Section.secfunctions: {"raw": []}}
+		sections = {"includes": Section.includes, "customfunctions": Section.customfunctions, "macros": Section.macros, "secfunctions": Section.secfunctions}
+		content = {Section.includes: {"raw": []}, Section.customfunctions: {"raw": []}, Section.macros: {"raw": []}, Section.secfunctions: {"raw": []}}
 
 		in_section = False;
 		current_section = None;

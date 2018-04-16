@@ -1236,6 +1236,7 @@ def generateEmulatorSource(expression_rules, file_name):
     multiplexer = []
     productive_switch_cases = []
 
+    includes.extend(config_funcdefs.getIncludes())
     for include in getSourceTemplate("emulator_include").split(","):
         if len(include) > 0:
             includes.append("#include {:s}".format(include.strip()))
@@ -1266,6 +1267,8 @@ def generateEmulatorSource(expression_rules, file_name):
     # generate c_files
     c_file = []
     c_file.extend(includes)
+    c_file.append("")
+    c_file.extend(config_funcdefs.getCustomFunctions())
     c_file.append("")
     c_file.extend(c_source)
     c_file.append("")
