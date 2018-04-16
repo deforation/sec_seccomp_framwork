@@ -106,7 +106,7 @@ specific values or change the value of those.
 
 Note, that the tracer needs most likely at least access to the following system calls to be fully operational
 - ptrace, wait4, getpid, socket, 
-  sendto, read, chdir, getcwd, 
+  sendto, read, chdir, getcwd, fstat,
   lseek, lstat, readlink, kill, 
   exit, exit_group, write, close, connect
 
