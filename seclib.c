@@ -69,7 +69,7 @@ int main_before(int argc, char **argv){
 
 	#ifdef SEC_MAIN_BEFORE
 		return sec_main_before(argc, argv);
-	#elif 
+	#else 
 		return EXIT_SUCCESS;
 	#endif
 }
@@ -93,7 +93,7 @@ int main_after(int argc, char **argv){
 
 	#ifdef SEC_MAIN_AFTER
 		return sec_main_after(argc, argv);
-	#elif
+	#else
 		return EXIT_FAILURE;
 	#endif
 }
