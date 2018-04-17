@@ -144,13 +144,13 @@ The following constructs are supported:
 Keep in mind, that each rule can only apper once, but it is possible
 to specify multiple checks / actions by separating them with a comma
 
- - {after}			Allows to specify special rules when the system call
-					was already executed, allowing to check and manipulate
-					return parameters of functions like: read, recvmsg, ...
-					The normal behaviour of seccomp is to check the system call
-					before it is executed
-					example: [read:after]
-					exanoke: [recvmsg:after]
+ - {after}		Allows to specify special rules when the system call
+			was already executed, allowing to check and manipulate
+			return parameters of functions like: read, recvmsg, ...
+			The normal behaviour of seccomp is to check the system call
+			before it is executed
+			example: [read:after]
+			exanoke: [recvmsg:after]
 
 - {action} 		represents an action like (terminate, allow, skip, trap)
 
@@ -275,20 +275,20 @@ This file consists only of some system calls for demo purpose and to show the po
 A function definition has the following format consisting
 of a comment block defining important data and the function itself
 
- - {syscall_name}:	Describes the name of the system call which
-					will be modified. Starts usually with SYS_{name}
-					Te modifier ":after" can be added to the system call
-					name. This means, that the function will be called
-					after the system call was executed.
-					It is possible to define the normal and the after version
-					but the functions must have a different name						
-					example: SYS_open, SYS_gettimeofday
-					example: SYS_read:after, SYS_recvmsg:after
+ - {syscall_name}:		Describes the name of the system call which
+				will be modified. Starts usually with SYS_{name}
+				Te modifier ":after" can be added to the system call
+				name. This means, that the function will be called
+				after the system call was executed.
+				It is possible to define the normal and the after version
+				but the functions must have a different name						
+				example: SYS_open, SYS_gettimeofday
+				example: SYS_read:after, SYS_recvmsg:after
 
 - {after}:			Allows to specify the flag ":after".
-					This means, that the function will be called
-					after the system call was executed.
-					If the flag is not set, the check is done before execution
+				This means, that the function will be called
+				after the system call was executed.
+				If the flag is not set, the check is done before execution
 
 - {field}:			Represents the name of a system call argument
  				example: filename
