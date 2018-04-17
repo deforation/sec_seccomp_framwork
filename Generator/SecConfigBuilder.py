@@ -900,7 +900,7 @@ def getParameterSizeExpression(par):
 # funcinfo: informations to the system call
 #
 # Return:
-# c-code as string
+# (c-code as string, true if overwrite modifies a return value/parameter)
 def generateEmulatorOverwriteMacro(line, funcinfo):
     reg = SecRegexBuilder();
     reg.skipRandom();
@@ -913,22 +913,25 @@ def generateEmulatorOverwriteMacro(line, funcinfo):
 
     target = m.group("target").strip()
     source = m.group("source").strip()
+    modifyreturn = False;
 
     src = ""
     if target == "return":
         src = "modifyReturnValue(pid, {:s});".format(source);
+        modifyreturn = True;
     else:
         par = config_funcdefs.getArgumentInfo(funcinfo["systemcall"], target)
         size = getParameterSizeExpression(par)
         if par["pointer"] == True:
             if par["out"] == True:
                 src = "modifyReturnParameter(pid, PAR{:d}, {:s}, {:s});".format(par["argument_nr"], source, size)
+                modifyreturn = True
             else:
                 src = "modifyParameter(pid, PAR{:d}, {:s}, {:s});".format(par["argument_nr"], source, size)
         else:
             src = "modifyPrimitiveParameter(pid, PAR{:d}, {:s});".format(par["argument_nr"], source)
 
-    return src;
+    return (src, modifyreturn);
 
 # Description:
 # Generates the if checks for the permission checks of a path flag
@@ -1015,6 +1018,7 @@ def generateEmulatorRuleCheck(line, expression_rules, funcinfo):
         if not rule.getCheck() is None: 
             par = config_funcdefs.getArgumentInfo(rule.getSyscall(), rule.getField());
             code = ""
+            final_action = "SEC_ACTION_ALLOW";
             if rule.getNewValue()[0] == "\"":
                 code = getSourceTemplate("rule_set_code_string");
                 code = code.replace("{string}", rule.getNewValue())
@@ -1025,13 +1029,19 @@ def generateEmulatorRuleCheck(line, expression_rules, funcinfo):
                 code = getSourceTemplate("rule_set_code_val");
                 code = code.replace("{variable}", rule.getField())
                 code = code.replace("{new_value}", transformGroupToFieldNameInExpression(rule.getSyscall(), rule.getNewValue(), primitive_change = True))
-                code = code.replace("{overwrite}", generateEmulatorOverwriteMacro("OVERWRITE({:s}, {:s})".format(field, field), funcinfo))
+                overwrite = generateEmulatorOverwriteMacro("OVERWRITE({:s}, {:s})".format(field, field), funcinfo);
+                code = code.replace("{overwrite}", overwrite[0])
+
+                # if the rule overwrites a return value / parameter, we have to hinder the system call from execution
+                # otherwise the change whould have no effect
+                if overwrite[1] == True:
+                    final_action = "SEC_ACTION_SKIP";
 
             clause = rule.getCheck()
             if not permission_check is None:
                 clause = "({:s}) && ({:s})".format(permission_check, rule.getCheck())
             rule_src = template.replace("{clause}", clause);
-            rule_src = rule_src.replace("{rule_action}", "SEC_ACTION_ALLOW")
+            rule_src = rule_src.replace("{rule_action}", final_action)
             rule_src = rule_src.replace("{code}", code);
             rule_src = rule_src.replace("\n\n", "\n")
             rule_src = rule_src.strip() 
@@ -1166,7 +1176,7 @@ def generateEmulatorFunction(expression_rules, funcinfo):
 
         new_lines = []
         if locType == LocType.OVERWRITE:
-            new_lines.append(generateEmulatorOverwriteMacro(line, funcinfo));
+            new_lines.append(generateEmulatorOverwriteMacro(line, funcinfo)[0]);
         elif locType == LocType.SKIP:
             new_lines.append("invalidateSystemcall(pid);")
         elif locType == LocType.RULE_CHECK:
