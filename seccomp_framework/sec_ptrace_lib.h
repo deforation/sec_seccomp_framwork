@@ -58,7 +58,7 @@ typedef int bool;
 #endif
 
 // Defines tracer constants sent thorugh the PTRACE_GETEVENTMSG event
-#define PTRACE_DATA_SHIFT			6
+#define PTRACE_DATA_SHIFT			8
 #define PTRACE_DBG_ALLOW			0x01
 #define PTRACE_DBG_TERMINATE		0x02
 #define PTRACE_DBG_MODIFY			0x04

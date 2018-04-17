@@ -281,15 +281,10 @@ void start_tracer(){
 			syscall_action = SYSCALL_BEFORE;
 		}
 
-/*
-		if (syscall_n == __NR_open){
-			printf("%d / %d / %ld / %d\n", syscall_n, is_seccomp_event, sc_retcode, syscall_action);
-		}
-*/
 		if (syscall_action != SYSCALL_NONE && syscall_action != SYSCALL_AFTER_ONLY){
 			// interprete and handle the ptrace event messages
 			bool interfere = false;
-			if (sc_retcode < 0){
+			if (is_seccomp_event){
 				if (trace_message & PTRACE_DBG_ALLOW){
 					log_debug_action("ALLOW", syscall_n);
 				} else if (trace_message & PTRACE_DBG_TERMINATE){

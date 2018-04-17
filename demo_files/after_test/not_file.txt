@@ -1,0 +1,1 @@
+not working: The rule shoult strip the not at the beginning of this text file while reading it.
