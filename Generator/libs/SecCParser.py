@@ -318,7 +318,7 @@ class CParser:
 		if scan_list == True:
 			reg.scanStringList("value");
 		else:
-			reg.scanString("value");
+			reg.scanAny("value");
 		m = reg.execute(line)
 
 		if "value" in m.groupdict():
@@ -350,6 +350,7 @@ class CParser:
 	# parses all relevant lines of a comment section
 	def __parseSecFunctionComment(self, line, line_iter, data):
 		syscall_defined = False;
+		mode_defined = False;
 
 		while not self.__isCommentEnd(line):
 			line_lower = line.lower();
@@ -369,6 +370,9 @@ class CParser:
 		if not syscall_defined:
 			print("There is a function with a missing link to a systemcall.\nMake sure the option systemcall: value is set in the comment section.")
 			exit()
+		else:
+			self.__setKeyValue(data, "after_check", True if  ":" in data["systemcall"] else False)
+
 
 		return data;
 

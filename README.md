@@ -4,7 +4,7 @@ The sec_seccomp_framework provides an easy way to implement privilege dropping a
 ## Capabilities
 The framework offers the ability to:
 * Generate seccomp bpf filter programs with an easy to use and extensive rule design
-* Manipulate parameters and the return value of system calls using the integrated ptrace module
+* Manipulate parameters and the return value of system calls before and afther their execution using the integrated ptrace module
 * Integrate the framework into an existing applications with little effort
 
 ## Requirements
@@ -134,7 +134,7 @@ tracer {action}:		list of systemcalls like (open, write, ...)
 # Allows to define rules targeting all system calls which
 # contain all the given field groups
 
-[{syscall_name}]
+[{syscall_name}{after}]
 # Allows to specify rules for specific system calls
 ```
 
@@ -143,6 +143,14 @@ There exist different ways to define rules.
 The following constructs are supported:
 Keep in mind, that each rule can only apper once, but it is possible
 to specify multiple checks / actions by separating them with a comma
+
+ - {after}			Allows to specify special rules when the system call
+					was already executed, allowing to check and manipulate
+					return parameters of functions like: read, recvmsg, ...
+					The normal behaviour of seccomp is to check the system call
+					before it is executed
+					example: [read:after]
+					exanoke: [recvmsg:after]
 
 - {action} 		represents an action like (terminate, allow, skip, trap)
 
@@ -195,6 +203,17 @@ redirect({permissions}):		{c-expression}: {field} => {new_value}, {c-expression}
 {field} redirect({permissions}):	{value_check}, {value_check}, ...
 ```
 
+Note: The normal behaviour of seccomp is to check a system call
+before it is executed. Unfortunately, many system calls become
+interesting after they have been executed.
+To be able to inspect the data after the execution,
+the :after flag can be added to the system calls section name.
+With the flag, the rules will be applied once the call is finished.
+ - It is possible to define the normal section and the after version
+ - Within the c-configuration file, an equivalent function block has to be defined by adding :after to the system call name: SYS_read:after,...
+ - The action skip has no effect when the system call was already executed
+
+
 The rule configuration logic allows also to modify and check strings and paths using. The prefix dir_ is necessary if the auto resolve of the path within the system call argument should automatically be resolved. Note that the value it should be checked against is also automatically resolved, which allows to define relative path checks
  - dir_starts_with("path") 
  - dir_ends_with("path")
@@ -230,6 +249,10 @@ allow(w):			filename dir_starts_with("./demo_files/write_yes_create_no")
 default:			terminate
 cmd allow:			F_GETFL
 skip:				cmd == F_GETFD
+
+[recvfrom:after]
+default:			modify
+buf redirect:		starts_with("GET /data/private/") => "GET /data/public/"	
 ```
 
 ## System call configuration scheme
@@ -252,14 +275,20 @@ This file consists only of some system calls for demo purpose and to show the po
 A function definition has the following format consisting
 of a comment block defining important data and the function itself
 
-- {syscall_name}:		Describes the name of the system call which
-				will be modified. Starts usually with SYS_{name}
-				example: SYS_open, SYS_gettimeofday
+ - {syscall_name}:	Describes the name of the system call which
+					will be modified. Starts usually with SYS_{name}
+					Te modifier ":after" can be added to the system call
+					name. This means, that the function will be called
+					after the system call was executed.
+					It is possible to define the normal and the after version
+					but the functions must have a different name						
+					example: SYS_open, SYS_gettimeofday
+					example: SYS_read:after, SYS_recvmsg:after
 
-- {header_list}:		Defines a list of headers which have to be
-				included in order to be able to compile the file
-				The list is separated through commas
-				example: sys/time.h, sys/resource.h
+- {after}:			Allows to specify the flag ":after".
+					This means, that the function will be called
+					after the system call was executed.
+					If the flag is not set, the check is done before execution
 
 - {field}:			Represents the name of a system call argument
  				example: filename
@@ -405,6 +434,16 @@ void sec_dup(int oldfd){
 */
 void sec_fcntl(int fd, int cmd){
 	CHECK_RULES();
+}
+
+/*
+* systemcall:			SYS_recvfrom:after
+* headers:				sys/types.h, sys/socket.h
+*
+* set_length[buf]:		len
+*/
+void sec_recvfrom_after(int sockfd, __OUT void *buf, size_t len, int flags, struct sockaddr *src_addr, socklen_t *addrlen){
+	CHECK_RULES()
 }
 ```
 

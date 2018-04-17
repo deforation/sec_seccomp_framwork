@@ -258,7 +258,13 @@ def reformulateComplexExpression(syscall, complex_statement):
 
             method = method.replace("{new_string}", m.group("string").strip())
             method = method.replace("{nr}", str(par["argument_nr"]))
-            method = method.replace("{is_out}", "true" if par["out"] == True else "false")
+            if par["out"] == True:
+                method = method.replace("{is_out}", "true")
+                method = method.replace("{final_action}", "SEC_ACTION_SKIP")
+            else:
+                method = method.replace("{is_out}", "false")
+                method = method.replace("{final_action}", "SEC_ACTION_ALLOW")
+
             complex_statement = method; 
 
     return complex_statement;
@@ -676,6 +682,13 @@ def generateSeccompRuleCode(rules, comment, for_tracer = False):
         for rule in rules:
             action_name = "" if not for_tracer else "_tracer";
             action_str = getSourceTemplate("seccomp_{:s}{:s}".format(rule.getAction(), action_name)).replace("{syscall_nr}", "SCMP_SYS({:s})".format(rule.getSyscall())).replace("{errorcode}", "EPERM");
+            if rules_config.syscallSupportsAfter(rule.getSyscall()):
+                if rules_config.syscallIsOnlyAfter(rule.getSyscall()):
+                    action_str = action_str.replace("{aftersupportflag}", " | PTRACE_USE_AFTER_ONLY")
+                else:
+                    action_str = action_str.replace("{aftersupportflag}", " | PTRACE_USE_AFTER")
+            else:
+                action_str = action_str.replace("{aftersupportflag}", "")
 
             if rule.getSyscall():
                 if rule.hasParameterChecks():
@@ -1199,7 +1212,7 @@ def generateEmulatorFunction(expression_rules, funcinfo):
 
     # generate multiplexer source
     template = getSourceTemplate("rule_multiplexer_case");
-    template = template.replace("{syscall}", funcinfo["systemcall"])
+    template = template.replace("{syscall}", funcinfo["systemcall"].split(":")[0])
     template = template.replace("{sec_function}", funcinfo["function"])
     template = template.replace("\n\n", "\n")
     template = template.strip()
@@ -1245,6 +1258,7 @@ def generateEmulatorSource(expression_rules, file_name):
     includes = ["#include \"sec_ptrace_lib.h\"", "#include \"{:s}\"".format(file_name + ".h")]
     multiplexer = []
     productive_switch_cases = []
+    productive_switch_cases_after = []
 
     includes.extend(config_funcdefs.getIncludes())
     for include in getSourceTemplate("emulator_include").split(","):
@@ -1258,20 +1272,33 @@ def generateEmulatorSource(expression_rules, file_name):
         (_includes, _c_source, _multiplexer) = generateEmulatorFunction(expression_rules, wrapperfun);
         includes.extend(_includes)
         c_source.extend(_c_source)
-        productive_switch_cases.extend(_multiplexer)
+        if not wrapperfun["after_check"]:
+            productive_switch_cases.extend(_multiplexer)
+        else:
+            productive_switch_cases_after.extend(_multiplexer)
 
     # filter duplicates
     includes = set(includes)
     includes = list(includes)
 
     # finish multiplexer
-    productive_switch_src = ["switch (syscall_n){"]
+    productive_switch_src = ["if (use_after_check == false) {", "switch (syscall_n){"]
     productive_switch_src.extend(productive_switch_cases)
     productive_switch_src.extend(getSourceTemplate("rule_multiplexer_default").split("\n"))
     productive_switch_src.append("}")
+    productive_switch_src.append("}")
 
-    multiplexer.append("void performSystemcall(pid_t pid, int status, int syscall_n){")
+    productive_switch_after_src = ["switch (syscall_n){"]
+    productive_switch_after_src.extend(productive_switch_cases_after)
+    productive_switch_after_src.extend(getSourceTemplate("rule_multiplexer_default").split("\n"))
+    productive_switch_after_src.append("}")
+    
+
+    multiplexer.append("void performSystemcall(pid_t pid, int status, int syscall_n, int use_after_check){")
     multiplexer.extend(productive_switch_src);
+    multiplexer.append("else {")
+    multiplexer.extend(productive_switch_after_src);
+    multiplexer.append("}")
     multiplexer.append("}")
 
     # generate c_files
@@ -1293,7 +1320,7 @@ def generateEmulatorSource(expression_rules, file_name):
     h_source.append("")
     h_source.append("#include <unistd.h>")
     h_source.append("")
-    h_source.append("void performSystemcall(pid_t pid, int status, int syscall_n);")
+    h_source.append("void performSystemcall(pid_t pid, int status, int syscall_n, int use_after_check);")
     h_source.append("")
     h_source.append("#endif //{:s}_H".format(file_name.upper()))
     SecCWriter().exportCode(OUTPUT_DIR + file_name + ".h", h_source);

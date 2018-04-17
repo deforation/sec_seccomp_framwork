@@ -382,6 +382,7 @@ struct sec_rule_result changeStringOnStartMatch(pid_t pid, const char *check, co
 			strncpy(&buffer[new_string_length], &string[matchdata.length], string_length - matchdata.length);
 		}
 		result.new_value = buffer;
+		result.size = buffer_size;
 		result.action = SEC_ACTION_MODIFY;
 	}
 
@@ -429,6 +430,7 @@ struct sec_rule_result changeStringOnEndMatch(pid_t pid, const char *check, cons
 		}
 		strncpy(&buffer[matchdata.start], new_string, new_string_length);
 		result.new_value = buffer;
+		result.size = buffer_size;
 		result.action = SEC_ACTION_MODIFY;
 	}
 
@@ -457,6 +459,11 @@ struct sec_rule_result changeStringValue(const char *new_string){
 	size_t buffer_size = strlen(new_string) + 1;
 	char *buffer = malloc(buffer_size);
 
+	for (size_t i = 0; i < buffer_size; i++){
+		buffer[i] = '\0';
+	}
+
+	strcpy(buffer, new_string);
 	result.new_value = buffer;
 	result.action = SEC_ACTION_MODIFY;
 	result.size = buffer_size;

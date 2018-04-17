@@ -22,7 +22,7 @@
 
 class SeccompRule:
 	def __init__(self, syscall, type, action, checks):
-		self.syscall = syscall;
+		self.syscall = syscall.split(":")[0];
 		self.type = type;
 		self.action = action;
 		self.checks = checks;

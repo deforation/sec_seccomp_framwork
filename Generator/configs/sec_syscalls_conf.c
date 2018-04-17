@@ -37,7 +37,18 @@
 *
 * - {syscall_name}:		Describes the name of the system call which
 *						will be modified. Starts usually with SYS_{name}
+*						The modifier ":after" can be added to the system call
+*						name. This means, that the function will be called
+*						after the system call was executed.
+*						It is possible to define the normal and the after version
+*						but the functions must have a different name						
 *						example: SYS_open, SYS_gettimeofday
+*						example: SYS_read:after, SYS_recvmsg:after
+*
+*	{after}:			Allows to specify the flag ":after".
+*						This means, that the function will be called
+*						after the system call was executed.
+*						If the flag is not set, the check is done before execution
 *
 * - {header_list}:		Defines a list of headers which have to be
 *						included in order to be able to compile the file
@@ -81,7 +92,7 @@
 *						Has to be from the same datatype
 * 
 * / * 
-* * systemcall:				{syscall_name}
+* * systemcall:				{syscall_name}{after}
 * * headers:				{header_list}
 * * set_group[{field}]:		{group_name_list}
 * * set_length[{field}]:	{length}
@@ -128,6 +139,18 @@
 * }
 *
 * /////////////////////////////////////////
+*
+*
+* Note: The normal behaviour of seccomp is to check a system call
+* before it is executed. Unfortunately, many system calls become
+* interesting after they have been executed.
+* To be able to inspect the data after the execution,
+* the :after flag can be added to the system calls section name.
+* With the flag, the rules will be applied once the call is finished.
+* - It is possible to define the normal section and the after version
+* - Within the c-configuration file, an equivalent function block has to
+*   be defined by adding :after to the system call name: SYS_read:after,...
+* - The action skip has no effect when the system call was already executed
 *
 * -----------------------------------------------------------------
 * Version: 1.0
@@ -330,6 +353,16 @@ void sec_dup(int oldfd){
 */
 void sec_fcntl(int fd, int cmd){
 	CHECK_RULES();
+}
+
+/*
+* systemcall:			SYS_read:after
+* headers:				unistd.h
+*
+* set_length[buf]:		count
+*/
+void sec_read_after(int fd, __OUT void *buf, size_t count){
+	CHECK_RULES()
 }
 
 // Section-End

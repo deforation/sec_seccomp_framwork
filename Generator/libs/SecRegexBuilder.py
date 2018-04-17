@@ -70,7 +70,7 @@ class SecRegexBuilder:
 		self.regex += "(?P<" + str(selector) + ">[a-zA-Z_.0-9]*)"
 
 	def scanString(self, selector):
-		self.regex += "(?P<" + str(selector) + ">[a-zA-Z_.\-\"\/]*)"
+		self.regex += "(?P<" + str(selector) + ">[a-zA-Z_.\-\"\/ ]*)"
 
 	def scanAny(self, selector):
 		self.regex += "(?P<" + str(selector) + ">.*)"

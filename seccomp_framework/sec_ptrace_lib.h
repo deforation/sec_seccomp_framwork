@@ -64,6 +64,8 @@ typedef int bool;
 #define PTRACE_DBG_MODIFY			0x04
 #define PTRACE_DBG_SKIP				0x08
 #define PTRACE_EXECUTE				0x10
+#define PTRACE_USE_AFTER		 	0x20
+#define PTRACE_USE_AFTER_ONLY	 	0x40
 
 // Structure containing data about the match of a string comparison
 struct match_info{
@@ -104,6 +106,7 @@ bool fdPathMatchesStart(pid_t pid, const char *check, int fd);
 bool fdPathMatchesEnd(pid_t pid, const char *check, int fd);
 struct sec_rule_result changeStringOnStartMatch(pid_t pid, const char *check, const char *string, size_t string_length, const char *new_string, bool is_path);
 struct sec_rule_result changeStringOnEndMatch(pid_t pid, const char *check, const char *string, size_t string_length, const char *new_string, bool is_path);
+struct sec_rule_result changeStringValue(const char *new_string);
 void writeLog(int level, char *string);
 
 // Functions to interact with a target process (Tracee)

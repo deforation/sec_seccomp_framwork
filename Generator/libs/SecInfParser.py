@@ -28,7 +28,7 @@
 # # Allows to define rules targeting all system calls which
 # # contain all the given field groups
 #
-# [{syscall_name}]
+# [{syscall_name}{after}]
 # # Allows to specify rules for specific system calls
 #
 # /////////////////////////////////////////////
@@ -37,6 +37,14 @@
 # The following constructs are supported:
 # Keep in mind, that each rule can only apper once, but it is possible
 # to specify multiple checks / actions by separating them with a comma
+#
+# - {after}			Allows to specify special rules when the system call
+#					was already executed, allowing to check and manipulate
+#					return parameters of functions like: read, recvmsg, ...
+#					The normal behaviour of seccomp is to check the system call
+#					before it is executed
+#					example: [read:after]
+#					exanoke: [recvmsg:after]
 #
 # - {action} 		represents an action like (terminate, allow or skip)
 #
@@ -90,6 +98,18 @@
 # 
 # /////////////////////////////////////////////
 #
+# Note: The normal behaviour of seccomp is to check a system call
+# before it is executed. Unfortunately, many system calls become
+# interesting after they have been executed.
+# To be able to inspect the data after the execution,
+# the :after flag can be added to the system calls section name.
+# With the flag, the rules will be applied once the call is finished.
+# - It is possible to define the normal section and the after version
+# - Within the c-configuration file, an equivalent function block has to
+#   be defined by adding :after to the system call name: SYS_read:after,...
+# - The action skip has no effect when the system call was already executed
+#
+#
 # The rule configuration logic allows also 
 # to modify and check strings and paths using. 
 # The prefix dir_ is necessary if the auto resolve of 
@@ -132,6 +152,7 @@ class SecInfParser:
 	# defines
 	SECTION_GENERAL = "General"
 	GROUP_EXPRESSION = "Expression"
+	GROUP_SETTINGS	 = "settings"
 
 	# basic and standard variables
 	debug = False;
@@ -199,7 +220,7 @@ class SecInfParser:
 		rules = []
 
 		for group, rule in self.rules[section].items():
-			if group != self.GROUP_EXPRESSION:
+			if group != self.GROUP_EXPRESSION and group != self.GROUP_SETTINGS:
 				for rule_detail in rule:
 					rule_detail["field"] = group;
 					rules.append(rule_detail);
@@ -218,6 +239,18 @@ class SecInfParser:
 
 		return rules;
 
+	# returns true if a system call exists which supports an after execution check
+	def syscallSupportsAfter(self, syscall):
+		if ":" in syscall:
+			return True;
+		else: 
+			return syscall + ":after" in self.rules
+
+	# check if it is a syscall only checking the after event
+	def syscallIsOnlyAfter(self, syscall):
+		syscall = syscall.split(":")[0]
+		return not syscall in self.rules;
+
 	# perform some basic plausibility checks on the config file
 	def __plausibilityCheck(self, config):
 		if not "General" in config.sections():
@@ -229,7 +262,18 @@ class SecInfParser:
 		rules = dict()
 
 		for section in config.sections():
+			aftermode = False 
+			if ":" in section:
+				mode =  section.split(":")[1]
+				if  mode != "after":
+					print("Section " + section + " is invalid. Only the mode after is availlable")
+					exit()
+				else:
+					aftermode = True
+
 			rules[section] = dict();
+			rules[section][self.GROUP_SETTINGS] = dict()
+			rules[section][self.GROUP_SETTINGS]["aftermode"] = aftermode;
 			for option in config.options(section):
 				group = self.GROUP_EXPRESSION;
 				action = "";

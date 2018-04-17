@@ -229,5 +229,11 @@ int sec_main_after(int argc, char **argv){
 	}
 	fclose(f);
 
+	// after execution system call manipulation test 
+	printf("--------------------------\n\n");
+	printf("The indent of the file starts with <not>, whith should be replaced by <its>\n");
+
+	readFile("./demo_files/after_test/not_file.txt", "r");
+
 	return 0;
 }
