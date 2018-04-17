@@ -206,36 +206,38 @@ void start_tracer(){
 		// Terminate the application, when a child has an error (unexpected termination)
 		terminateOnChildError(status);
 
-		// read the child's registers and get the system call number
-		ptrace(PTRACE_GETREGS, pid, 0, &regs );
-		syscall_n = regs.orig_rax;
+		if (status>>8 == (SIGTRAP | (PTRACE_EVENT_SECCOMP<<8))){
+			// read the child's registers and get the system call number
+			ptrace(PTRACE_GETREGS, pid, 0, &regs );
+			syscall_n = regs.orig_rax;
 
-		// retrieve the ptrace message
-		ptrace(PTRACE_GETEVENTMSG, pid, 0, &trace_message);
+			// retrieve the ptrace message
+			ptrace(PTRACE_GETEVENTMSG, pid, 0, &trace_message);
 
-		// interprete and handle the ptrace event messages
-		bool interfere = false;
-		if (trace_message & PTRACE_DBG_ALLOW){
-			log_debug_action("ALLOW", syscall_n);
-		} else if (trace_message & PTRACE_DBG_TERMINATE){
-			log_debug_action("TERMINATE", syscall_n);
-			kill(pid, SIGSTOP);
-			exit(0);
-		} else if (trace_message & PTRACE_DBG_MODIFY){
-			log_debug_action("MODIFY", syscall_n);
-			interfere = true;
-		} else if (trace_message & PTRACE_DBG_SKIP){
-			log_debug_action("SKIP", syscall_n);
-			invalidateSystemcall(pid);
-			modifyReturnValue(pid, -1);
-		} else if (trace_message & PTRACE_EXECUTE){
-			interfere = true;
-		}
+			// interprete and handle the ptrace event messages
+			bool interfere = false;
+			if (trace_message & PTRACE_DBG_ALLOW){
+				log_debug_action("ALLOW", syscall_n);
+			} else if (trace_message & PTRACE_DBG_TERMINATE){
+				log_debug_action("TERMINATE", syscall_n);
+				kill(pid, SIGSTOP);
+				exit(0);
+			} else if (trace_message & PTRACE_DBG_MODIFY){
+				log_debug_action("MODIFY", syscall_n);
+				interfere = true;
+			} else if (trace_message & PTRACE_DBG_SKIP){
+				log_debug_action("SKIP", syscall_n);
+				invalidateSystemcall(pid);
+				modifyReturnValue(pid, -1);
+			} else if (trace_message & PTRACE_EXECUTE){
+				interfere = true;
+			}
 
-		// if we are on the productive system (no debug)
-		// or modify is called, we run the emulator
-		if (interfere == true){
-			performSystemcall(pid, status, syscall_n);
+			// if we are on the productive system (no debug)
+			// or modify is called, we run the emulator
+			if (interfere == true){
+				performSystemcall(pid, status, syscall_n);
+			}
 		}
 	}
 }
