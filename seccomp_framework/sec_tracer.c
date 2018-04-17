@@ -175,6 +175,23 @@ void log_debug_action(const char *action, int syscall){
 	writeLog(LOG_INFO, str);
 }
 
+/*
+* Description:
+* Initializes the datastructure to store the system call states
+* for a given process/thread.
+* This structure is used to store information with which state
+* of a system call we deal with.
+* - None
+* - Before execution
+* - Seccomp trigger before execution
+* - After execution
+*
+* Parameter:
+* pid: pid for which the state should be stored.
+*
+* Return:
+* syscall_state struct (has to be freed)
+*/
 syscall_state init_syscall_state(pid_t pid){
 	syscall_state newstate = malloc(sizeof(_syscall_state));
 
@@ -186,6 +203,19 @@ syscall_state init_syscall_state(pid_t pid){
 	return newstate;
 }
 
+/*
+* Description:
+* Retrieves the state information for a given process/thread
+* if the id does not exist, the linked list is extended by a
+* new entry, which then is returned
+*
+* Parameter:
+* state: state start point of the linked list
+* pid: pid for which the state should be stored
+*
+* Return:
+* syscall_state struct for the given pid
+*/
 syscall_state get_syscall_state(syscall_state state, pid_t pid){
 	syscall_state node = state;
 
