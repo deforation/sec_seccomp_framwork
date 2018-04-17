@@ -114,21 +114,24 @@ void init_error_handling(){
 *
 * Parameter:
 * status:	status info of waitpid
+*
+* Return:
+* true if the child has stopped or false if not
 */
-void terminateOnChildError(int status){
-	//long sc_number, sc_retcode;
-
+bool terminateOnChildError(int status){
 	if (WIFEXITED(status)) {
-        printf("\nChild exit with status %d\n", WEXITSTATUS(status));
-        exit(0);
+		if (status != EXIT_SUCCESS){
+        	printf("\nChild exit with status %d\n", WEXITSTATUS(status));
+    	}
+        return true;
     }
     if (WIFSIGNALED(status)) {
         printf("\nChild exit due to signal %d\n", WTERMSIG(status));
-        exit(0);
+        return true;
     }
     if (!WIFSTOPPED(status)) {
         printf("\nwait() returned unhandled status 0x%x\n", status);
-        exit(0);
+        return true;
     }
     if (WSTOPSIG(status) == SIGTRAP || WSTOPSIG(status) == SIGCONT || WSTOPSIG(status) == SIGCONT+1) {
         /* Note that there are *three* reasons why the child might stop
@@ -136,18 +139,14 @@ void terminateOnChildError(int status){
          *  1) syscall entry
          *  2) syscall exit
          *  3) child calls exec
+         * we are therefore not required to stop the application
          */
-    	/*
-        sc_number = ptrace(PTRACE_PEEKUSER, pid, SC_NUMBER, NULL);
-        sc_retcode = ptrace(PTRACE_PEEKUSER, pid, SC_RETCODE, NULL);
-
-        (void)sc_number;
-        (void)sc_retcode;*/
-        //printf("SIGTRAP: syscall %ld, rc = %ld\n", sc_number, sc_retcode);
     } else {
         printf("\nChild stopped due to signal %d\n", WSTOPSIG(status));
-        exit(0);
+        return true;
     }
+
+    return false;
 }
 
 //-------------------------------------------------------
@@ -218,16 +217,34 @@ syscall_state init_syscall_state(pid_t pid){
 */
 syscall_state get_syscall_state(syscall_state state, pid_t pid){
 	syscall_state node = state;
+	bool finished = false;
 
-	while (node->next != NULL){
-		if (node->pid == pid){
+	while (finished == false){
+		if (node->pid == pid)
 			return node;
-		}
-		node = node->next;
+		else if (node->next == NULL)
+			finished = true;
+		else
+			node = node->next;
 	}
 
 	node->next = init_syscall_state(pid);
 	return node->next;
+}
+
+/*
+* Description:
+* Frees the storage used by the syscall_state
+* linked list.
+*/
+void free_syscall_state(syscall_state state){
+	syscall_state node = state;
+
+	while (node != NULL){
+		syscall_state temp = node;
+		node = node->next;
+		free(temp);
+	}
 }
 
 /*
@@ -278,7 +295,10 @@ void start_tracer(){
 		pid = waitpid(-1, &status, __WALL);
 
 		// Terminate the application, when a child has an error (unexpected termination)
-		terminateOnChildError(status);
+		if (terminateOnChildError(status) == true){
+			free_syscall_state(statelist);
+			exit(0);
+		}
 
 		// read the child's registers and get the system call number
 		ptrace(PTRACE_GETREGS, pid, 0, &regs );
