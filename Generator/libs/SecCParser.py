@@ -127,7 +127,7 @@ class CParser:
 		if addpid:
 			arguments.append("pid_t pid")
 
-		for i in range(0, 6):
+		for i in range(0, 7):
 			for name, arginfo in funcinfo["arguments"].items():
 				if int(arginfo["argument_nr"]) == i:
 					arguments.append(self.__buildArgumentString(name, arginfo))
