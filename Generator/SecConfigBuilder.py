@@ -907,7 +907,7 @@ def generateEmulatorOverwriteMacro(line, funcinfo):
     reg.expectString("OVERWRITE\(");
     reg.scanCVariableName("target");
     reg.findString(",", skip_only_spaces = True);
-    reg.scanExpression("source");
+    reg.scanAny("source");
     reg.expectString("\)");
     m = reg.execute(line)
 
