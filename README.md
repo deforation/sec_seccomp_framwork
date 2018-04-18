@@ -453,6 +453,8 @@ void sec_fcntl(int fd, int cmd){
 * headers:				sys/types.h, sys/socket.h
 *
 * set_length[buf]:		len
+* read_length[buf]:		return
+* set_return[buf]:		strlen+1
 */
 void sec_recvfrom_after(int sockfd, __OUT void *buf, size_t len, int flags, struct sockaddr *src_addr, socklen_t *addrlen){
 	CHECK_RULES()
