@@ -235,5 +235,12 @@ int sec_main_after(int argc, char **argv){
 
 	readFile("./demo_files/after_test/not_file.txt", "r");
 
+
+	// after execution system call manipulation for search replace 
+	printf("--------------------------\n\n");
+	printf("All double spaces should be replaced by underscores..\n");
+
+	readFile("./demo_files/replace/test.txt", "r");
+
 	return 0;
 }

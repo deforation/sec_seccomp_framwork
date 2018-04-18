@@ -191,7 +191,7 @@ def transformGroupToFieldName(syscall, group_field):
 
 # Description:
 # Reformulates a complex expression to understand constructs like 
-# start_with, end_with
+# start_with, end_with, contains
 #
 # Parameter:
 # syscall: Name of the system call
@@ -206,7 +206,7 @@ def reformulateComplexExpression(syscall, complex_statement):
         return None
 
     # reformat the starts_with and ends_with statements so they point to the corresponding c_function
-    while "starts_with" in complex_statement or "ends_with" in complex_statement:
+    while "starts_with(" in complex_statement or "ends_with(" in complex_statement or "contains(" in complex_statement:
         check = complex_statement;
         transition = None;
         if "=>" in complex_statement:
@@ -220,8 +220,8 @@ def reformulateComplexExpression(syscall, complex_statement):
         reg.ignoreSpaces();
         reg.scanCustom("is_dir", "dir_", quantifier = "?");
         reg.scanCustom("is_fdpath", "fd_path_", quantifier = "?");
-        reg.scanCustom("type", "starts|ends");
-        reg.expectString("_with\(")
+        reg.scanCustom("type", "starts_with|ends_with|contains");
+        reg.expectString("\(")
         reg.scanString("string")
         reg.expectString("\)")
         m = reg.execute(complex_statement)  
@@ -230,11 +230,12 @@ def reformulateComplexExpression(syscall, complex_statement):
         operator = "" if m.group("not") is None else "!";
         string = m.group("string").strip()
         size = getParameterSizeExpression(par);
+        metype = m.group("type").strip().replace("_with", "");
         method = ""
         if m.group("is_fdpath"):
-            method = getSourceTemplate("fd_path_" + m.group("type").strip() + "_with_check") 
+            method = getSourceTemplate("fd_path_" + metype + "_with_check") 
         else:
-            method = getSourceTemplate(m.group("type").strip() + "_with_check") if transition is None else getSourceTemplate(m.group("type").strip() + "_with_replace") 
+            method = getSourceTemplate(metype + "_with_check") if transition is None else getSourceTemplate(metype + "_with_replace") 
 
 
         method = method.replace("{reference}", string)
@@ -245,6 +246,7 @@ def reformulateComplexExpression(syscall, complex_statement):
 
         if not transition:
             method = method.replace("{negate_operator}", operator)
+            method = method.replace("{modify_return_value}", "");
 
             complex_statement = complex_statement[:m.span()[0]] + method + complex_statement[m.span()[1]:] 
         else:
@@ -258,12 +260,20 @@ def reformulateComplexExpression(syscall, complex_statement):
 
             method = method.replace("{new_string}", m.group("string").strip())
             method = method.replace("{nr}", str(par["argument_nr"]))
+            if "set_return" in par:
+                size = getParameterSizeExpression(par, use_return_length = True)
+                method = method.replace("{modify_return_value}", "modifyReturnValue(pid, {:s});".format(size));
+            else:
+                method = method.replace("{modify_return_value}", "");
+
             if par["out"] == True:
                 method = method.replace("{is_out}", "true")
                 method = method.replace("{final_action}", "SEC_ACTION_SKIP")
+                method = method.replace("{max_size}", getParameterSizeExpression(par))
             else:
                 method = method.replace("{is_out}", "false")
                 method = method.replace("{final_action}", "SEC_ACTION_ALLOW")
+                method = method.replace("{max_size}", "-1")
 
             complex_statement = method; 
 
@@ -878,15 +888,25 @@ def getLocType(line):
 #
 # Return:
 # size expression
-def getParameterSizeExpression(par):
-    if par["pointer"] == True:
+def getParameterSizeExpression(par, use_read_length = False, use_return_length = False):
+    length = "";
+    if "length" in par:
+        length = par["length"];
+    if use_read_length and "set_length" in par:
+        length = par["set_length"];
+    if use_return_length and "set_return" in par:
+        length = par["set_return"];
+
+    if length == "return":
+        size = "readInt(pid, RET)"
+    elif par["pointer"] == True:
         if not "length" in par:
             size = "sizeof({:s})".format(par["datatype"]);
         else: 
-            if "strlen" in par["length"]:
-                size = par["length"].replace("strlen", "strlen({:s})".format(par["name"]))
+            if "strlen" in length:
+                size = length.replace("strlen", "strlen({:s})".format(par["name"]))
             else:
-                size = par["length"];
+                size = length;
     else:
         size = "sizeof({:s})".format(par["datatype"]);
 
@@ -1036,7 +1056,20 @@ def generateEmulatorRuleCheck(line, expression_rules, funcinfo):
                 code = getSourceTemplate("rule_set_code_string");
                 code = code.replace("{string}", rule.getNewValue())
                 code = code.replace("{nr}", str(par["argument_nr"]))
-                code = code.replace("{is_out}", "true" if par["out"] == True else "false")
+                code = code.replace("{field}", rule.getField())
+
+                if "set_return" in par:
+                    size = getParameterSizeExpression(par, use_return_length = True)
+                    code = code.replace("{modify_return_value}", "modifyReturnValue(pid, {:s});".format(size));
+                else:
+                    code = code.replace("{modify_return_value}", "");
+
+                if par["out"] == True:
+                    code = code.replace("{is_out}", "true")
+                    code = code.replace("{max_size}", getParameterSizeExpression(par))
+                else:
+                    code = code.replace("{is_out}", "false")
+                    code = code.replace("{max_size}", "-1")
             else:
                 par = config_funcdefs.getArgumentInfo(rule.getSyscall(), rule.getField());
                 code = getSourceTemplate("rule_set_code_val");
@@ -1106,17 +1139,15 @@ def generateMultiplexerParameterLoader(par):
 
     source = "";
     size = getParameterSizeExpression(par)
+    read_size = getParameterSizeExpression(par, use_read_length = True)
 
     # check if parameter is a string
     if "strlen" in size:
         source = "readTerminatedString(pid, PAR{:d})".format(par["argument_nr"]);
-    elif "length" in par:
-        source = "readData(pid, PAR{:d}, {:s})".format(par["argument_nr"], size);
+    elif "length" in par or par["pointer"]:
+        source = "readData(pid, PAR{:d}, {:s}, {:s})".format(par["argument_nr"], size, read_size);
     else:
-        if par["pointer"]:
-            source = "readData(pid, PAR{:d}, {:s})".format(par["argument_nr"], size);
-        else:
-            source = "({:s})readInt(pid, PAR{:d})".format(par["datatype"], par["argument_nr"]);
+        source = "({:s})readInt(pid, PAR{:d})".format(par["datatype"], par["argument_nr"]);
 
     definition = "{:s} {:s}{:s} = {:s};".format(par["datatype"], ptr, par["name"], source);
     return definition;

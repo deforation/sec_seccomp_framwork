@@ -96,6 +96,8 @@
 * * headers:				{header_list}
 * * set_group[{field}]:		{group_name_list}
 * * set_length[{field}]:	{length}
+* * read_length[{field}]:	{length}
+* * set_return[{field}]:	{length}
 * * /
 * void sec_functionname({arguments}){
 * 	// any kind of source
@@ -151,6 +153,38 @@
 * - Within the c-configuration file, an equivalent function block has to
 *   be defined by adding :after to the system call name: SYS_read:after,...
 * - The action skip has no effect when the system call was already executed
+*
+*
+* Note: There are 3 different length flags called (set_length, read_length and set_return)
+* - set_length:  defines the length of a system all argument.
+*  				 This can either be strlen or mor likely strlen+1,
+*				 the name of another argumen or it can be skiped.
+*				 If the value is skiped, sizeof(datatype) is used by default
+*
+* - read_length: The read length defines how many bytes have to be
+*                read from the target application. This has the following
+*				 reason: If we modify the read systemcall after it was executed
+*				 we are able to manipulate the retrieved data.
+*				 Now, if we would read the whole length according to the buffer size
+*				 we may end up reading parts of old data. To prevent this,
+*				 we need the return value of the system call, which gives us the information
+*				 how many bytes have been read (are valid in the buffer).
+*				 In the case of SYS_read, we would therefore have to define
+*				 the length to "return". As a result, only the given amount
+*				 of data is read. If the option is not defined, the set_length rule is used.
+*
+* - set_return:  Enables the possibility to define what the system call
+*				 should return (overwrite) when the specified field is
+*				 modified. This allows us to define a rule to modify for example
+*				 the output of the read system call and return the new
+*				 length of the modified string with the system call.
+*				 If we for example change the read output of "leet"
+*				 to "magnus", the return value has to be set to the
+*				 new length of magnus. Otherwise the application would
+*				 just read "magn", which is not what we want.
+*				 - This option is currently only supported in combination
+*				   with buffer manipulations (not primitive data types
+*   
 *
 * -----------------------------------------------------------------
 * Version: 1.0
@@ -222,7 +256,7 @@ int get_random_value(){
 * set_length[filename]: strlen+1
 *
 */
-void sec_open(const char *filename, int flags, mode_t mode){
+void sec_open(char *filename, int flags, mode_t mode){
 	DEBUG_BEGIN()
 		// print function call end parameters if debug is active
 		char log[1024];
@@ -268,7 +302,7 @@ void sec_getcwd(__OUT char *buf, unsigned long size){
 *
 * set_length[path]: 	strlen+1
 */
-void sec_chdir(const char *path){
+void sec_chdir(char *path){
 	DEBUG_BEGIN()
 		// print function call end parameters if debug is active
 		char log[1024];
@@ -360,6 +394,15 @@ void sec_fcntl(int fd, int cmd){
 * headers:				unistd.h
 *
 * set_length[buf]:		count
+* read_length[buf]:		return
+* set_return[buf]:		strlen+1
+*
+* Note: Two different lengths are defined set and read
+* the set length is used as an information for the maximum buffer size
+* the read length is used to retrieve the data for buf argument
+* In this case, the system call returns it with the return value.
+* if it is not set, we may read data from a previous system call, because there is not
+* necessary a '\0' describing the end
 */
 void sec_read_after(int fd, __OUT void *buf, size_t count){
 	CHECK_RULES()

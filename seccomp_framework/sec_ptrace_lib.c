@@ -19,6 +19,8 @@
 * -----------------------------------------------------------------
 *
 ******************************************************************/
+#define _GNU_SOURCE
+
 #include <sys/user.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,6 +30,7 @@
 #include <string.h>
 #include <errno.h>
 #include <syslog.h>
+#include <string.h>
 
 #include <sys/types.h>
 #include <dirent.h>
@@ -180,7 +183,6 @@ struct match_info compareStringStart(pid_t pid, const char *check, const char *s
 	return (struct match_info) {.match = result, .start = 0, .length = check_length, .reference_length = real_length, .realpath_string = real_string, .realpath_check = real_check};
 }
 
-
 /*
 * Description:
 * Checks if a string matches a specific substring at the end
@@ -231,6 +233,34 @@ struct match_info compareStringEnd(pid_t pid, const char *check, const char *str
 	}
 
 	return (struct match_info) {.match = result, .start = real_length - check_length, .length = check_length, .reference_length = real_length, .realpath_string = real_string, .realpath_check = NULL};
+}
+
+/*
+* Description:
+* Checks if a string is contained within another.
+*
+* pid: process id of the calling process
+* check: string to match on the parameter string
+* string: string which should be checked
+* string_length: length of the string buffer (must not equal to the string length inside)
+* is_path: defines if the string represents a path (will be resolved)
+*/
+bool stringMatchesPart(pid_t pid, const char *check, const char *string, size_t string_length, bool is_path){
+	(void)string_length;
+	char *real_string = NULL;
+	bool contains = false;
+
+	if (is_path == true){
+		real_string = getPidRealPath(pid, string);
+
+		contains = (strcasestr(real_string, check) != NULL) ? true : false;
+
+		free(real_string);
+	} else {
+		contains = (strcasestr(string, check) != NULL) ? true : false;
+	}
+
+	return contains;
 }
 
 /*
@@ -350,6 +380,35 @@ bool fdPathMatchesEnd(pid_t pid, const char *check, int fd){
 
 /*
 * Description:
+* Checks if a string matches the path of a file descriptor
+* Note, that this is not a 100% secure check, because a file
+* descriptor can change over time and those changes
+* may not be notified under /proc/pid/fd
+* Especially, if we deal wich hardlinks
+*
+* INFO:
+* Returns true if the paths matches otherwise false
+*
+* Parameters:
+* pid: process id of the calling process
+* check: string to match on the parameter string
+* fd: file descriptor to check
+*/
+bool fdPathMathesPart(pid_t pid, const char *check, int fd){
+	char file[80] = {"/0"};
+	bool result = false;
+
+	sprintf(file, "/proc/%d/fd/%d", pid, fd);
+	char *fd_path = realpath(file, NULL);
+	if (fd_path != NULL){
+		result = stringMatchesPart(pid, check, fd_path, PATH_MAX, false);
+	}
+
+	return result;
+}
+
+/*
+* Description:
 * Checks if a string matches a specific substring at the beginning
 * and replace the matched area with a new string
 *
@@ -445,6 +504,145 @@ struct sec_rule_result changeStringOnEndMatch(pid_t pid, const char *check, cons
 	return result;
 }
 
+/*
+* Description:
+* Checks if a string matches a specific substring  within it
+* and replace the matched area with a new string 
+* search and replaces all occurences
+*
+* INFO:
+* Returns the sec_rule_result struct with the instructions about the new data
+*
+* Parameters:
+* pid: process id of the calling process
+* check: string to match on the parameter string
+* string: string which should be checked
+* string_length: length of the string buffer (must not equal to the string length inside)
+* is_path: defines if the string represents a path (will be resolved)
+*/
+struct sec_rule_result changeStringOnPartMatch(pid_t pid, const char *check, const char *string, size_t string_length, const char *new_string, bool is_path){
+	(void)string_length;
+	struct sec_rule_result result = {.action = SEC_ACTION_NONE, .new_value = NULL, .size = -1};
+	char *real_string = NULL;
+	char *out_string = NULL;
+
+	if (is_path == true){
+		real_string = getPidRealPath(pid, string);
+
+		out_string = search_and_replace_all(check, new_string, real_string);
+	} else {
+		out_string = search_and_replace_all(check, new_string, string);
+	}
+
+	if (out_string != NULL){
+		result.new_value = out_string;
+		result.size = strlen(out_string) + 1;
+		result.action = SEC_ACTION_MODIFY;
+	}
+
+	return result;
+}
+
+/*
+* Description:
+* Searches a string within another.
+* If it exists, it is replaced by the replace argument.
+* searc_and_replace allows to replace all occurences
+* by using the found_last parameter, which acts as the start position
+* and as a return parameter of the next start position.
+*
+* The function creates a new string / buffer which has to be freed manually
+*
+* Parameter:
+* search: search string
+* replace: replace part for search
+* string: string to search and replace in
+* found_last: start position / return value for next replace action (-1 if string was not found)
+*
+* Return;
+* New buffer for the replaced string
+* returns NULL if it was not found
+*/
+char *search_and_replace(const char *search, const char *replace, const char *string, int *found_last) {
+	char *outputString, *searchStart;
+	int begin_at = (found_last == NULL) ? 0 : *found_last;
+
+	// check if string occures
+	searchStart = strcasestr(string + begin_at, search);
+	if(searchStart == NULL || strlen(search) == 0) {
+		if (found_last != NULL){
+			*found_last = -1;
+		}
+		return NULL;
+	}
+
+	// build new string
+	size_t buffer_size = strlen(string) - strlen(search) + strlen(replace) + 1;
+	outputString = (char*) malloc(buffer_size * sizeof(char));
+	if(outputString == NULL) {
+		if (found_last != NULL){
+			*found_last = -1;
+		}
+		return NULL;
+	}
+	for (size_t i = 0; i < buffer_size; ++i){
+		outputString[i] = '\0';
+	}
+
+	// write first part
+	int length = searchStart - string; 
+	strncpy(outputString, string, length);
+
+	// add replace part
+	if (found_last != NULL){
+		*found_last = length + strlen(replace);
+	}
+	strcat(outputString, replace);
+
+	// add rest of the string
+	length += strlen(search);
+	strcat(outputString, (char*)string+length);
+
+	return outputString;
+}
+
+
+/*
+* Description:
+* Searches a string within another.
+* If it exists, it is replaced by the replace argument.
+* All occurences are searched and replaced
+*
+* The function creates a new string / buffer which has to be freed manually
+*
+* Parameter:
+* search: search string
+* replace: replace part for search
+* string: string to search and replace in
+*
+* Return;
+* New buffer for the replaced string
+* Returns NULL if the string was not found
+*/
+char *search_and_replace_all(const char *search, const char *replace, const char *string){
+	int start = 0;
+
+	char *out = search_and_replace(search, replace, string, &start);;
+	char *last = out;
+	
+	while (out != NULL) {
+		if (last != out && last != string){
+			free(last);
+			last = NULL;
+		}
+
+		last = out;
+		out = search_and_replace(search, replace, out, &start);
+	} 
+
+	return last;
+}
+
 
 /*
 * Description:
@@ -537,11 +735,15 @@ void modifyPrimitiveParameter(pid_t pid, int param_register, int new_value){
 * Return:
 * void* pointer to the data
 */
-void* readData(pid_t pid, int param_register, size_t size){
+void* readData(pid_t pid, int param_register, size_t buffer_size, size_t read_size){
 	size_t count = 0;
-	char *text = calloc(size, 1);
+	char *text = calloc(buffer_size, 1);
 	char *retval = text;
 	size_t i;
+
+	if (read_size > buffer_size){
+		read_size = buffer_size;
+	}
 
 	char *param_addr = (char *)ptrace(PTRACE_PEEKUSER, pid, sizeof(uintptr_t)*param_register, 0);
 	if (param_addr != NULL){
@@ -558,10 +760,10 @@ void* readData(pid_t pid, int param_register, size_t size){
 	        param_addr += sizeof (long);
 	  
 	        p = (char *) &val;
-	        for (i = 0; i < sizeof (long) && count < size; ++i, ++text, ++count) {
+	        for (i = 0; i < sizeof (long) && count < read_size; ++i, ++text, ++count) {
 	            *text = *p++;
 	        }
-	    } while (count < size);
+	    } while (count < read_size);
 	} else {
 		retval = NULL;
 	}
@@ -786,8 +988,9 @@ void invalidateSystemcall(pid_t pid){
 * result: structure containing information about the action 
 * param_register: register to modify (if SEC_ACTION_MODIFY)
 * isOutParam: defines if the modified register contains an output buffer (out parameter)
+* max_size: important if we deal with an out parameter (in this case we are not allowed to extend the buffer on modify)
 */
-void executeRuleResult(pid_t pid, struct sec_rule_result result, int param_register, bool isOutParam)
+void executeRuleResult(pid_t pid, struct sec_rule_result result, int param_register, bool isOutParam, int max_size)
 {
 	switch(result.action){
 		case SEC_ACTION_ALLOW: case SEC_ACTION_NONE:
@@ -799,7 +1002,7 @@ void executeRuleResult(pid_t pid, struct sec_rule_result result, int param_regis
 		case SEC_ACTION_MODIFY:
 			if (result.new_value != NULL){
 				if (isOutParam == true){	
-					modifyReturnParameter(pid, param_register, result.new_value, result.size);
+					modifyReturnParameter(pid, param_register, result.new_value, (result.size > max_size) ? max_size : result.size);
 				} else {
 					modifyParameter(pid, param_register, result.new_value, result.size);
 				}

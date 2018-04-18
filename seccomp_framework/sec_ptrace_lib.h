@@ -101,17 +101,20 @@ struct sec_rule_result {
 char *getPidCwd(pid_t pid);
 char *getPidRealPath(pid_t pid, const char *string);
 bool stringMatchesStart(pid_t pid, const char *check, const char *string, size_t string_length, bool is_path);
+bool stringMatchesPart(pid_t pid, const char *check, const char *string, size_t string_length, bool is_path);
 bool stringMatchesEnd(pid_t pid, const char *check, const char *string, size_t string_length, bool is_path);
 bool fdPathMatchesStart(pid_t pid, const char *check, int fd);
+bool fdPathMathesPart(pid_t pid, const char *check, int fd);
 bool fdPathMatchesEnd(pid_t pid, const char *check, int fd);
 struct sec_rule_result changeStringOnStartMatch(pid_t pid, const char *check, const char *string, size_t string_length, const char *new_string, bool is_path);
+struct sec_rule_result changeStringOnPartMatch(pid_t pid, const char *check, const char *string, size_t string_length, const char *new_string, bool is_path);
 struct sec_rule_result changeStringOnEndMatch(pid_t pid, const char *check, const char *string, size_t string_length, const char *new_string, bool is_path);
 struct sec_rule_result changeStringValue(const char *new_string);
 void writeLog(int level, char *string);
 
 // Functions to interact with a target process (Tracee)
 int readInt(pid_t pid, int param_register);
-void* readData(pid_t pid, int param_register, size_t size);
+void* readData(pid_t pid, int param_register, size_t buffer_size, size_t read_size);
 char* readTerminatedString(pid_t pid, int param_register);
 
 void modifyPrimitiveParameter(pid_t pid, int param_register, int new_value);
@@ -120,6 +123,9 @@ void modifyReturnParameter(pid_t pid, int param_register, void *new_data, int ta
 void modifyReturnValue(pid_t pid, int value);
 void invalidateSystemcall(pid_t pid);
 
-void executeRuleResult(pid_t pid, struct sec_rule_result, int param_register, bool isOutParam);
+char *search_and_replace(const char *search, const char *replace, const char *string, int *found_last);
+char *search_and_replace_all(const char *search, const char *replace, const char *string);
+
+void executeRuleResult(pid_t pid, struct sec_rule_result, int param_register, bool isOutParam, int max_size);
 
 #endif  //SEC_PTRACE_LIB_H

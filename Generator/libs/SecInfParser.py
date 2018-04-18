@@ -117,20 +117,24 @@
 # note that the path parameter is also automatically resolved
 # therefore it is possible to define relative paths
 #  - dir_starts_with("path") 
+#  - dir_contains("path")
 #  - dir_ends_with("path")
 #
 #
 # If on the other way, we want to check strings itself, 
 # the following functions hould be used:
 #  - starts_with("string") 
+#  - contains("string")
 #  - ends_with("string")
+#
 #
 # There is also a way to perform checks (no modifications) 
 # on the path of a file descriptor. Note, that file descriptors 
 # generally have no strictly defined path representation, 
 # especially if we deal # with hardlinks,... 
 # The runctions resolve the path based on the directory "/proc/pid/fd/fdnum
-#  - fd_path_starts_with("path") and
+#  - fd_path_starts_with("path") 
+#  - fd_path_contains("path")
 #  - fd_path_ends_with("path")
 #
 # -----------------------------------------------------------------

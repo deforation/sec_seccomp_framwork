@@ -1,0 +1,1 @@
+If  underscores  are  visible  instead  of  double  spaces,  the  rule  was  successfull.

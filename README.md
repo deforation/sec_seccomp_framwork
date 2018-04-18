@@ -216,16 +216,19 @@ With the flag, the rules will be applied once the call is finished.
 
 The rule configuration logic allows also to modify and check strings and paths using. The prefix dir_ is necessary if the auto resolve of the path within the system call argument should automatically be resolved. Note that the value it should be checked against is also automatically resolved, which allows to define relative path checks
  - dir_starts_with("path") 
+ - dir_contains("path") 
  - dir_ends_with("path")
 
 
 If on the other way, we want to check strings itself, the following functions hould be used:
  - starts_with("string") 
+ - contains("string") 
  - ends_with("string")
 
 There is also a way to perform checks (no modifications) on the path of a file descriptor. Note, that file descriptors generally have no strictly defined path representation, especially if we deal with hardlinks,... 
 The functions resolve the path based on the directory "/proc/pid/fd/fdnum"
- - fd_path_starts_with("path") and
+ - fd_path_starts_with("path")
+ - fd_path_contains("path")
  - fd_path_ends_with("path")
 
 ### Example rules
@@ -270,6 +273,13 @@ All log action are performed using the syslog library of linux. The entries are 
 
 NOTE:
 This file consists only of some system calls for demo purpose and to show the possibilities as well as the functions the framework provides
+
+Note: 
+There are 3 different length flags called (set_length, read_length and set_return)
+ - set_length:  defines the length of a system all argument. This can either be strlen or mor likely strlen+1, the name of another argumen or it can be skiped. If the value is skiped, sizeof(datatype) is used by default
+ - read_length: The read length defines how many bytes have to be read from the target application. This has the following reason: If we modify the read systemcall after it was executed we are able to manipulate the retrieved data. Now, if we would read the whole length according to the buffer size we may end up reading parts of old data. To prevent this, we need the return value of the system call, which gives us the information how many bytes have been read (are valid in the buffer). In the case of SYS_read, we would therefore have to define the length to "return". As a result, only the given amount of data is read. If the option is not defined, the set_length rule is used.
+ - set_return:  Enables the possibility to define what the system call should return (overwrite) when the specified field is modified. This allows us to define a rule to modify for example the output of the read system call and return the new length of the modified string with the system call. If we for example change the read output of "leet" to "magnus", the return value has to be set to the new length of magnus. Otherwise the application would just read "magn", which is not what we want.
+ - The option set_return is currently only supported in combination with buffer manipulations (not primitive data types
 
 ```
 A function definition has the following format consisting
@@ -332,6 +342,8 @@ of a comment block defining important data and the function itself
 * headers:			{header_list}
 * set_group[{field}]:		{group_name_list}
 * set_length[{field}]:		{length}
+* read_length[{field}]:		{length}
+* set_return[{field}]:		{length}
 * /
 void sec_functionname({arguments}){
 	// any kind of source

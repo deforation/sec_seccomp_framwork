@@ -328,7 +328,7 @@ class CParser:
 			exit()	
 
 	# parses the set_group property of a comment
-	def __parseSecFunctionComment_parameter_option(self, option, line, data, single_item = False):
+	def __parseSecFunctionComment_parameter_option(self, option, key, line, data, single_item = False):
 		reg = SecRegexBuilder();
 		reg.findString(option + "\[")
 		reg.scanCVariableName("variable")
@@ -340,9 +340,9 @@ class CParser:
 
 		if "variable" in m.groupdict() and "groups" in m.groupdict():
 			if single_item == False:
-				self.__setChildChildKeyValue(data, "arguments", m.group("variable"), option[4:], m.group("groups").split(","))
+				self.__setChildChildKeyValue(data, "arguments", m.group("variable"), key, m.group("groups").split(","))
 			else:
-				self.__setChildChildKeyValue(data, "arguments", m.group("variable"), option[4:], m.group("groups").split(",")[0])
+				self.__setChildChildKeyValue(data, "arguments", m.group("variable"), key, m.group("groups").split(",")[0])
 		else:
 			print("Syntax error in line <{:s}>. Invalid variable name or group definition".format(line));
 			exit()	
@@ -356,9 +356,13 @@ class CParser:
 			line_lower = line.lower();
 
 			if "set_group" in line_lower:
-				self.__parseSecFunctionComment_parameter_option("set_group", line_lower, data);
+				self.__parseSecFunctionComment_parameter_option("set_group", "group", line_lower, data);
 			elif "set_length" in line_lower:
-				self.__parseSecFunctionComment_parameter_option("set_length", line_lower, data, single_item = True);
+				self.__parseSecFunctionComment_parameter_option("set_length", "length", line_lower, data, single_item = True);
+			elif "read_length" in line_lower:
+				self.__parseSecFunctionComment_parameter_option("read_length", "set_length", line_lower, data, single_item = True);
+			elif "set_return" in line_lower:
+				self.__parseSecFunctionComment_parameter_option("set_return", "set_return", line_lower, data, single_item = True);
 			elif "systemcall" in line_lower:
 				self.__parseSecFunctionComment_option("systemcall", line, data);
 				syscall_defined = True;
