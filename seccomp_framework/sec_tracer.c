@@ -271,7 +271,6 @@ void start_tracer(){
 	long trace_message = -1;
 	int status = 0;
 	int syscall_n = 0;
-	long sc_retcode = 0;
 	int is_seccomp_event;
 	int syscall_action;
 	syscall_state sysstate = NULL;
@@ -303,7 +302,6 @@ void start_tracer(){
 		// read the child's registers and get the system call number
 		ptrace(PTRACE_GETREGS, pid, 0, &regs );
 		syscall_n = regs.orig_rax;
-		sc_retcode = ptrace(PTRACE_PEEKUSER, pid, SC_RETCODE, NULL);
 		is_seccomp_event = status>>8 == (SIGTRAP | (PTRACE_EVENT_SECCOMP<<8));
 		
 		// retrieve the ptrace message
@@ -321,7 +319,7 @@ void start_tracer(){
 			if (is_seccomp_event){
 				sysstate->state[syscall_n] = (trace_message & PTRACE_USE_AFTER) ? SYSCALL_BEFORE_AFTER_SUPPORT : SYSCALL_BEFORE;
 				sysstate->state[syscall_n] = (trace_message & PTRACE_USE_AFTER_ONLY) ? SYSCALL_AFTER_ONLY : sysstate->state[syscall_n];
-			} else if (sc_retcode >= 0 && (sysstate->state[syscall_n] == SYSCALL_BEFORE_AFTER_SUPPORT || sysstate->state[syscall_n] == SYSCALL_AFTER_ONLY)){
+			} else if (sysstate->state[syscall_n] == SYSCALL_BEFORE_AFTER_SUPPORT || sysstate->state[syscall_n] == SYSCALL_AFTER_ONLY){
 				sysstate->state[syscall_n] = SYSCALL_AFTER;
 			} else {
 				sysstate->state[syscall_n] = SYSCALL_NONE;
