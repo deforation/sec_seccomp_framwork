@@ -347,7 +347,6 @@ void start_tracer(){
 				} else if (trace_message & PTRACE_DBG_SKIP){
 					log_debug_action("SKIP", syscall_n);
 					invalidateSystemcall(pid);
-					modifyReturnValue(pid, -1);
 				} else if (trace_message & PTRACE_EXECUTE){
 					interfere = true;
 				}

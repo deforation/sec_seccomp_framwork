@@ -691,7 +691,7 @@ def generateSeccompRuleCode(rules, comment, for_tracer = False):
         code_lines.append(comment)
         for rule in rules:
             action_name = "" if not for_tracer else "_tracer";
-            action_str = getSourceTemplate("seccomp_{:s}{:s}".format(rule.getAction(), action_name)).replace("{syscall_nr}", "SCMP_SYS({:s})".format(rule.getSyscall())).replace("{errorcode}", "EPERM");
+            action_str = getSourceTemplate("seccomp_{:s}{:s}".format(rule.getAction(), action_name)).replace("{syscall_nr}", "SCMP_SYS({:s})".format(rule.getSyscall())).replace("{errorcode}", "ENOSYS");
             if rules_config.syscallSupportsAfter(rule.getSyscall()):
                 if rules_config.syscallIsOnlyAfter(rule.getSyscall()):
                     action_str = action_str.replace("{aftersupportflag}", " | PTRACE_USE_AFTER_ONLY")

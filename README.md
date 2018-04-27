@@ -112,7 +112,7 @@ A normal client application needs at least the following permissions so it is ab
 
 Note that the actions have the following behaviour:
  - terminate: Terminates the application
- - skip: Does not run the system call. Errno is set to EPERM instead. (Only in productive mode)
+ - skip: Does not run the system call. Errno is set to ENOSYS instead. (Only in productive mode)
          In debug mode, -1 is returned by the system call instead because errno can not easily be set by the tracer.
  - allow: Executes the system call.
  - trap: Calls the trap function which terminates the application and prints the causing system call number.
@@ -558,7 +558,7 @@ The Configuration Builder creates the following seccomp instructions for the cli
 sec_seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(socket), 2, SCMP_A0(SCMP_CMP_EQ, AF_LOCAL),SCMP_A1(SCMP_CMP_EQ, SOCK_STREAM));
 sec_seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(socket), 2, SCMP_A0(SCMP_CMP_EQ, AF_UNIX),SCMP_A1(SCMP_CMP_EQ, SOCK_STREAM));
 // Add specific skip rules
-sec_seccomp_rule_add(ctx, SCMP_ACT_ERRNO(EPERM), SCMP_SYS(setrlimit), 1, SCMP_A0(SCMP_CMP_EQ, RLIMIT_CPU));
+sec_seccomp_rule_add(ctx, SCMP_ACT_ERRNO(ENOSYS), SCMP_SYS(setrlimit), 1, SCMP_A0(SCMP_CMP_EQ, RLIMIT_CPU));
 // Add general modify rules
 sec_seccomp_rule_add(ctx, SCMP_ACT_TRACE(PTRACE_EXECUTE), SCMP_SYS(open), 0);
 sec_seccomp_rule_add(ctx, SCMP_ACT_TRACE(PTRACE_EXECUTE), SCMP_SYS(setrlimit), 0);

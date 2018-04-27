@@ -32,6 +32,7 @@ void readFile(char *path, char *access){
 	printf("---------ACCESS FILE WITH %s ---------\n", access);
 	printf("path: %s\n", path);
 
+	errno = 0;
 	FILE *f2;
 	f2 = fopen(path, access);
 	if (f2){
@@ -43,6 +44,7 @@ void readFile(char *path, char *access){
 		printf("Error\n");
 	}
 
+	printf("errno = %d\n", errno);
 	printf("---------END---------\n\n");
 }
 
@@ -50,6 +52,7 @@ void writeFile(char *path, char *access){
 	printf("---------WRITE FILE WITH %s ---------\n", access);
 	printf("path: %s\n", path);
 
+	errno = 0;
 	FILE *f2;
 	f2 = fopen(path, access);
 	if (f2){
@@ -59,6 +62,7 @@ void writeFile(char *path, char *access){
 		printf("Error\n");
 	}
 
+	printf("errno = %d\n", errno);
 	printf("---------END---------\n\n");
 }
 
@@ -66,6 +70,7 @@ void createFile(char *path){
 	printf("---------CREATE FILE WITH %s ---------\n", "w");
 	printf("path: %s\n", path);
 
+	errno = 0;
 	FILE *f2;
 	f2 = fopen(path, "w");
 	if (f2){
@@ -75,6 +80,7 @@ void createFile(char *path){
 		printf("Error\n");
 	}
 
+	printf("errno = %d\n", errno);
 	printf("---------END---------\n\n");
 }
 
@@ -157,20 +163,24 @@ int sec_main_after(int argc, char **argv){
 	printf("--------------------------\n\n");
 	printf("Try to modify different resource limits\n");
 	printf("Set RLIMIT_NPROC max to 50, we should be modified to 8 and cur to 1 less\n");
+	errno = 0;
 	struct rlimit lim = {rlim_cur: 40, rlim_max: 50};
 	struct rlimit rlim; 
 	setrlimit(RLIMIT_NPROC, &lim);
 	getrlimit(RLIMIT_NPROC, &rlim);
 	printf("cur: %ld\n", rlim.rlim_cur);
 	printf("max: %ld\n", rlim.rlim_max);
+	printf("errno: %d\n", errno);
 
 
 	printf("\nTry to set RLIMIT_CPU to cur = 200 and max to 250. Should not be possible (skip call)\n");
 	lim = (struct rlimit){rlim_cur: 200, rlim_max: 250};
+	errno = 0;
 	setrlimit(RLIMIT_CPU, &lim);
 	getrlimit(RLIMIT_CPU, &rlim);
 	printf("cur: %ld\n", rlim.rlim_cur);
 	printf("max: %ld\n", rlim.rlim_max);
+	printf("errno: %d\n", errno);
 	
 	// get timeofday test
 	printf("--------------------------\n\n");
@@ -190,16 +200,17 @@ int sec_main_after(int argc, char **argv){
 
 	printf("--------------------------\n\n");
 	printf("Try to read the access mode with fcntl -> should be possible\n");
+	errno = 0;
 	FILE *ffc = fopen("./demo_files/fd_copy_deny/test.txt", "r");
 	int flags = fcntl(fileno(ffc), F_GETFL, 0);
-	if (flags >= 0){
-		printf("RULE SUCCESSFUL\n");
+	if (errno == 0){
+		printf("RULE SUCCESSFUL (errno = %d) (flags = %d)\n", errno, flags);
 	}
 	printf("Try to read the descriptor flags with fcntl -> should be invalid\n");
 	errno = 0;
 	int desc = fcntl(fileno(ffc), F_GETFD, 0);
-	if (desc < 0){
-		printf("RULE SUCCESSFUL\n");
+	if (errno > 0){
+		printf("RULE SUCCESSFUL (errno = %d) (desc = %d)\n", errno, desc);
 	}
 	fclose(ffc);
 
@@ -223,7 +234,7 @@ int sec_main_after(int argc, char **argv){
 	int fd_copy = dup(fileno(f));
 	printf("copied fd: %d\n", fd_copy);
 	if (fd_copy == -1){
-		printf("COPY failed as expected\n");
+		printf("COPY failed as expected (errno = %d)\n", errno);
 	} else {
 		printf("ERROR, Wrong result\n");
 	}
