@@ -29,8 +29,7 @@ int sec_main_after(int argc, char **argv);
 void readFile(char *path, char *access){
 	char line[1024];
 
-	printf("---------ACCESS FILE WITH %s ---------\n", access);
-	printf("path: %s\n", path);
+	printf("Try to access file %s with <%s>\n", path, access);
 
 	errno = 0;
 	FILE *f2;
@@ -45,12 +44,11 @@ void readFile(char *path, char *access){
 	}
 
 	printf("errno = %d\n", errno);
-	printf("---------END---------\n\n");
+	printf("\n");
 }
 
 void writeFile(char *path, char *access){
-	printf("---------WRITE FILE WITH %s ---------\n", access);
-	printf("path: %s\n", path);
+	printf("Try to access file %s with <%s>\n", path, access);
 
 	errno = 0;
 	FILE *f2;
@@ -63,12 +61,11 @@ void writeFile(char *path, char *access){
 	}
 
 	printf("errno = %d\n", errno);
-	printf("---------END---------\n\n");
+	printf("\n");
 }
 
 void createFile(char *path){
-	printf("---------CREATE FILE WITH %s ---------\n", "w");
-	printf("path: %s\n", path);
+	printf("Try to access file %s\n", path);
 
 	errno = 0;
 	FILE *f2;
@@ -81,7 +78,7 @@ void createFile(char *path){
 	}
 
 	printf("errno = %d\n", errno);
-	printf("---------END---------\n\n");
+	printf("\n");
 }
 
 /*
@@ -115,28 +112,34 @@ int sec_main_after(int argc, char **argv){
 	(void)argv;
 
 	// read and write file test
+	printf("\n------------------------ EXAMPLE 01 ---------------------\n");
 	printf(" ** Try to read a valid file. Should be possible\n");
 	readFile("./demo_files/valid/test.txt", "r");
 
+	printf("------------------------ EXAMPLE 02 ---------------------\n");
 	printf(" ** Try to read the modify file with r. Should be redirected to the redirected file.\n");
 	readFile("./demo_files/modify/test.txt", "r");
 
+	printf("------------------------ EXAMPLE 03 ---------------------\n");
 	printf(" ** Try to read the skip file with r. Should return an error and print nothing.\n");
 	readFile("./demo_files/skip/test.txt", "r");
 
+	printf("------------------------ EXAMPLE 04 ---------------------\n");
 	printf(" ** Try to create a file and write data into it in a directory where create is disallowed and read allowed. Should not be allowed.\n");
 	createFile("./demo_files/write_yes_create_no/existing.txt");
 
+	printf("------------------------ EXAMPLE 05 ---------------------\n");
 	printf(" ** Try to read a file in a directory where create is disallowed and read allowed. Should be possible.\n");
 	readFile("./demo_files/write_yes_create_no/existing.txt", "r+");
 
+	printf("------------------------ EXAMPLE 06 ---------------------\n");
 	printf(" ** Try to read a file with the ending .dat. Should redirected to the .txt file.\n");
 	readFile("./demo_files/filechange/test.dat", "r");
 
 	// getcwd and chdir test
+	printf("------------------------ EXAMPLE 07 ---------------------\n");
 	char cwdsafe[PATH_MAX];
 	getcwd(cwdsafe, PATH_MAX);
-	printf("--------------------------\n");
 	char dir[100] = "should be cleared";
 	printf("PTR: %p\n", dir);
 	printf("INIT TEXT: %s\n", dir);
@@ -157,10 +160,9 @@ int sec_main_after(int argc, char **argv){
 	getcwd(dir, 100);
 	printf("Client CWD is: %s\n", dir);
 	chdir(cwdsafe);
-	printf("--------------------------\n");
 
 	// setrlimit test
-	printf("--------------------------\n\n");
+	printf("\n------------------------ EXAMPLE 08 ---------------------\n");
 	printf("Try to modify different resource limits\n");
 	printf("Set RLIMIT_NPROC max to 50, we should be modified to 8 and cur to 1 less\n");
 	errno = 0;
@@ -173,6 +175,7 @@ int sec_main_after(int argc, char **argv){
 	printf("errno: %d\n", errno);
 
 
+	printf("\n------------------------ EXAMPLE 09 ---------------------\n");
 	printf("\nTry to set RLIMIT_CPU to cur = 200 and max to 250. Should not be possible (skip call)\n");
 	lim = (struct rlimit){rlim_cur: 200, rlim_max: 250};
 	errno = 0;
@@ -183,7 +186,7 @@ int sec_main_after(int argc, char **argv){
 	printf("errno: %d\n", errno);
 	
 	// get timeofday test
-	printf("--------------------------\n\n");
+	printf("\n------------------------ EXAMPLE 10 ---------------------\n");
 	printf("Get the time which is slightly modified on each call\n");
 	char buffer[30];
 	struct timeval tv;
@@ -198,7 +201,7 @@ int sec_main_after(int argc, char **argv){
 	}
 
 
-	printf("--------------------------\n\n");
+	printf("\n------------------------ EXAMPLE 11 ---------------------\n");
 	printf("Try to read the access mode with fcntl -> should be possible\n");
 	errno = 0;
 	FILE *ffc = fopen("./demo_files/fd_copy_deny/test.txt", "r");
@@ -215,7 +218,7 @@ int sec_main_after(int argc, char **argv){
 	fclose(ffc);
 
 	// file descriptor test
-	printf("--------------------------\n\n");
+	printf("\n------------------------ EXAMPLE 12 ---------------------\n");
 	printf("Try to copy a file descriptor which is not permitted\n");
 
 	FILE *f = fopen("./demo_files/fd_copy_deny/test.txt", "r");
@@ -241,17 +244,26 @@ int sec_main_after(int argc, char **argv){
 	fclose(f);
 
 	// after execution system call manipulation test 
-	printf("--------------------------\n\n");
+	printf("\n------------------------ EXAMPLE 13 ---------------------\n");
 	printf("The indent of the file starts with <not>, whith should be replaced by <its>\n");
 
 	readFile("./demo_files/after_test/not_file.txt", "r");
 
 
 	// after execution system call manipulation for search replace 
-	printf("--------------------------\n\n");
+	printf("\n------------------------ EXAMPLE 14 ---------------------\n");
 	printf("All double spaces should be replaced by underscores..\n");
 
 	readFile("./demo_files/replace/test.txt", "r");
 
+
+	// after execution system call manipulation for search replace 
+	printf("\n------------------------ EXAMPLE 15 ---------------------\n");
+	printf("The next rule modifies the write system call.\n");
+	printf("All one digit numbers within round brackets will be written out.\n");
+	char val[] = "(1) (2) (3) (4) (5) (6) (7) (8) (9)";
+	printf("%s\n", val);
+
+	printf("\n\nFINISHED\n");
 	return 0;
 }

@@ -82,6 +82,14 @@ class CParser:
 		el = self.__getArgumentData(syscall, field);
 		return el["argument_nr"]		
 
+	# returns the function info to a system call
+	def getFuncInfo(self, syscall):
+		el = self.__findElement(self.sections[Section.secfunctions], "systemcall", "SYS_" + syscall)
+		if el == None:
+			el = self.__findElement(self.sections[Section.secfunctions], "systemcall", syscall)
+
+		return el;
+
 	# returns all information about an argument
 	# if field_as_argument_nr is set, the field parameter is treated
 	# as the argument number
@@ -335,7 +343,7 @@ class CParser:
 		reg.findString("\]")
 		reg.findString(":")
 		reg.ignoreSpaces()
-		reg.scanSecGroupList("groups");
+		reg.scanAny("groups");
 		m = reg.execute(line)
 
 		if "variable" in m.groupdict() and "groups" in m.groupdict():
@@ -361,8 +369,8 @@ class CParser:
 				self.__parseSecFunctionComment_parameter_option("set_length", "length", line_lower, data, single_item = True);
 			elif "read_length" in line_lower:
 				self.__parseSecFunctionComment_parameter_option("read_length", "set_length", line_lower, data, single_item = True);
-			elif "set_return" in line_lower:
-				self.__parseSecFunctionComment_parameter_option("set_return", "set_return", line_lower, data, single_item = True);
+			elif "link_update" in line_lower:
+				self.__parseSecFunctionComment_parameter_option("link_update", "link_update", line_lower, data, single_item = True);
 			elif "systemcall" in line_lower:
 				self.__parseSecFunctionComment_option("systemcall", line, data);
 				syscall_defined = True;

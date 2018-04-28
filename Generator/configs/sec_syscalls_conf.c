@@ -97,7 +97,7 @@
 * * set_group[{field}]:		{group_name_list}
 * * set_length[{field}]:	{length}
 * * read_length[{field}]:	{length}
-* * set_return[{field}]:	{length}
+* * link_update[{field}]:	{field}={length}
 * * /
 * void sec_functionname({arguments}){
 * 	// any kind of source
@@ -173,18 +173,23 @@
 *				 the length to "return". As a result, only the given amount
 *				 of data is read. If the option is not defined, the set_length rule is used.
 *
-* - set_return:  Enables the possibility to define what the system call
-*				 should return (overwrite) when the specified field is
-*				 modified. This allows us to define a rule to modify for example
+* - link_update: Enables the possibility to link updates. So that after a
+*				 specific parameter was manipulated, a second one will be modified at the same time.
+*				 This allows us to define a rule to modify for example
 *				 the output of the read system call and return the new
 *				 length of the modified string with the system call.
 *				 If we for example change the read output of "leet"
 *				 to "magnus", the return value has to be set to the
 *				 new length of magnus. Otherwise the application would
 *				 just read "magn", which is not what we want.
+*				 The same behaviour can be observed with the write system call.
+*				 If the write buffer is modified, the count parameter has to be 
+*				 updated to the length of the new buffer.
 *				 - This option is currently only supported in combination
-*				   with buffer manipulations (not primitive data types
-*   
+*				   with buffer manipulations.
+*				 example for SYS_read:after:  link_update[buf]:	return=strlen+1
+*				 example for Sys_write:		  link_update[buf]:	count=strlen+1
+*					
 *
 * -----------------------------------------------------------------
 * Version: 1.0
@@ -395,7 +400,8 @@ void sec_fcntl(int fd, int cmd){
 *
 * set_length[buf]:		count
 * read_length[buf]:		return
-* set_return[buf]:		strlen+1
+*
+* link_update[buf]:		return=strlen+1
 *
 * Note: Two different lengths are defined set and read
 * the set length is used as an information for the maximum buffer size
@@ -403,8 +409,24 @@ void sec_fcntl(int fd, int cmd){
 * In this case, the system call returns it with the return value.
 * if it is not set, we may read data from a previous system call, because there is not
 * necessary a '\0' describing the end
+*
+* link update defines, that the return value of the system call
+* should automatically be updated to the new length
 */
 void sec_read_after(int fd, __OUT void *buf, size_t count){
+	CHECK_RULES()
+}
+
+/*
+* systemcall:			SYS_write
+* headers:				unistd.h
+*
+* set_length[buf]:		count
+* read_lenth[buf]:		count
+*
+* link_update[buf]:		count=strlen+1
+*/
+void sec_write(int fd, void *buf, size_t count){
 	CHECK_RULES()
 }
 

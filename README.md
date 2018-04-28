@@ -9,14 +9,14 @@ The framework offers the ability to:
 
 ## Requirements
 The framework has for the rule generation process the following requirements:
-* Python >3.5
+* Python >= 3.5
 * Python libraries: argparse, ConfigParser
 
 The c-part of the framework requires:
 * seccomp development libraries
 * os: Linux or linux based derivate (tested on Debian GNU/Linux 9)
 * currently: x86 or x64 structure
-* recommended: kernel version > 4.8
+* recommended: kernel version >= 4.8
 
 In the debug mode, seccomp will be initialized with the flag SECCOMP_FILTER_FLAG_LOG,
 which automatically logs all seccomp actions under "/proc/sys/kernel/seccomp/actions_logged".
@@ -278,8 +278,10 @@ Note:
 There are 3 different length flags called (set_length, read_length and set_return)
  - set_length:  defines the length of a system all argument. This can either be strlen or mor likely strlen+1, the name of another argumen or it can be skiped. If the value is skiped, sizeof(datatype) is used by default
  - read_length: The read length defines how many bytes have to be read from the target application. This has the following reason: If we modify the read systemcall after it was executed we are able to manipulate the retrieved data. Now, if we would read the whole length according to the buffer size we may end up reading parts of old data. To prevent this, we need the return value of the system call, which gives us the information how many bytes have been read (are valid in the buffer). In the case of SYS_read, we would therefore have to define the length to "return". As a result, only the given amount of data is read. If the option is not defined, the set_length rule is used.
- - set_return:  Enables the possibility to define what the system call should return (overwrite) when the specified field is modified. This allows us to define a rule to modify for example the output of the read system call and return the new length of the modified string with the system call. If we for example change the read output of "leet" to "magnus", the return value has to be set to the new length of magnus. Otherwise the application would just read "magn", which is not what we want.
- - The option set_return is currently only supported in combination with buffer manipulations (not primitive data types
+ - link_update: Enables the possibility to link updates. So that after a specific parameter was manipulated, a second one will be modified at the same time. This allows us to define a rule to modify for example the output of the read system call and return the new length of the modified string with the system call. If we for example change the read output of "leet" to "magnus", the return value has to be set to the new length of magnus. Otherwise the application would just read "magn", which is not what we want. The same behaviour can be observed with the write system call. If the write buffer is modified, the count parameter has to be updated to the length of the new buffer.
+Note: This option is currently only supported in combination with buffer manipulations.
+example for SYS_read:after:  link_update[buf]:	return=strlen+1
+example for Sys_write:		 link_update[buf]:	count=strlen+1
 
 ```
 A function definition has the following format consisting
@@ -454,9 +456,22 @@ void sec_fcntl(int fd, int cmd){
 *
 * set_length[buf]:		len
 * read_length[buf]:		return
-* set_return[buf]:		strlen+1
+* link_update[buf]:		return=strlen+1
 */
 void sec_recvfrom_after(int sockfd, __OUT void *buf, size_t len, int flags, struct sockaddr *src_addr, socklen_t *addrlen){
+	CHECK_RULES()
+}
+
+/*
+* systemcall:			SYS_write
+* headers:				unistd.h
+*
+* set_length[buf]:		count
+* read_lenth[buf]:		count
+*
+* link_update[buf]:		count=strlen+1
+*/
+void sec_write(int fd, void *buf, size_t count){
 	CHECK_RULES()
 }
 ```
@@ -579,14 +594,19 @@ void sec_open(pid_t pid, const char *filename, int flags, mode_t mode){
 	__rule_action.action = SEC_ACTION_SKIP;
 	
 	{
-		struct sec_rule_result redirect_result = changeStringOnEndMatch(pid, ".dat", filename, strlen(filename)+1, ".txt", true);
-		executeRuleResult(pid, redirect_result, PAR1, false);
-		if (redirect_result.action == SEC_ACTION_MODIFY){
+		struct sec_rule_result new_string = changeStringOnEndMatch(pid, ".dat", filename, strlen(filename)+1, ".txt", true);
+		if (new_string.action == SEC_ACTION_MODIFY){
+			filename = realloc(filename, new_string.size);
+			memcpy(filename, new_string.new_value, new_string.size);
+			
 			__rule_action.action = SEC_ACTION_ALLOW;
 		}
+		executeRuleResult(pid, new_string, PAR1, false, -1);
 	}
 	
 	executeRuleResult(pid, __rule_action, -1, false);
+
+	free(filename);
 }
 
 void sec_setrlimit(pid_t pid, int resource, struct rlimit *rlim){
@@ -611,6 +631,8 @@ void sec_setrlimit(pid_t pid, int resource, struct rlimit *rlim){
 	}
 	
 	executeRuleResult(pid, __rule_action, -1, false);
+
+	free(rlim);
 }
 
 void performSystemcall(pid_t pid, int status, int syscall_n){
@@ -621,7 +643,6 @@ void performSystemcall(pid_t pid, int status, int syscall_n){
 				int flags = (int)readInt(pid, PAR2);
 				char *filename = readTerminatedString(pid, PAR1);
 				sec_open(pid, filename, flags, mode);
-				free(filename);
 			}
 			break;
 		case SYS_setrlimit:
@@ -629,7 +650,6 @@ void performSystemcall(pid_t pid, int status, int syscall_n){
 				struct rlimit *rlim = readData(pid, PAR2, sizeof(struct rlimit));
 				int resource = (int)readInt(pid, PAR1);
 				sec_setrlimit(pid, resource, rlim);
-				free(rlim);
 			}
 			break;
 		default:

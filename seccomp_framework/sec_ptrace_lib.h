@@ -117,6 +117,7 @@ int readInt(pid_t pid, int param_register);
 void* readData(pid_t pid, int param_register, size_t buffer_size, size_t read_size);
 char* readTerminatedString(pid_t pid, int param_register);
 
+void reset_kernel_stack_addr();
 void modifyPrimitiveParameter(pid_t pid, int param_register, int new_value);
 void modifyParameter(pid_t pid, int param_register, void *new_data, int new_size);
 void modifyReturnParameter(pid_t pid, int param_register, void *new_data, int target_buffer_size);

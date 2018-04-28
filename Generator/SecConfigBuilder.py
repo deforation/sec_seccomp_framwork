@@ -222,9 +222,9 @@ def reformulateComplexExpression(syscall, complex_statement):
         reg.scanCustom("is_fdpath", "fd_path_", quantifier = "?");
         reg.scanCustom("type", "starts_with|ends_with|contains");
         reg.expectString("\(")
-        reg.scanString("string")
+        reg.scanAny("string")
         reg.expectString("\)")
-        m = reg.execute(complex_statement)  
+        m = reg.execute(check)  
 
         par = config_funcdefs.getArgumentInfo(syscall, m.group("variable").strip())
         operator = "" if m.group("not") is None else "!";
@@ -237,6 +237,8 @@ def reformulateComplexExpression(syscall, complex_statement):
         else:
             method = getSourceTemplate(metype + "_with_check") if transition is None else getSourceTemplate(metype + "_with_replace") 
 
+        overwrite_action = getSourceTemplate("overwrite_return_param") if par["out"] == True else getSourceTemplate("overwrite_non_return_param")
+        method = method.replace("{consecutive_parameter_overwrite}", overwrite_action);
 
         method = method.replace("{reference}", string)
         method = method.replace("{field}", par["name"])
@@ -260,11 +262,9 @@ def reformulateComplexExpression(syscall, complex_statement):
 
             method = method.replace("{new_string}", m.group("string").strip())
             method = method.replace("{nr}", str(par["argument_nr"]))
-            if "set_return" in par:
-                size = getParameterSizeExpression(par, use_return_length = True)
-                method = method.replace("{modify_return_value}", "modifyReturnValue(pid, {:s});".format(size));
-            else:
-                method = method.replace("{modify_return_value}", "");
+
+            link_update = generateLinkUpdateSource(config_funcdefs.getFuncInfo(syscall), par, larger_buffer_name_if_var_is_not_return_value = "new_string.new_value");
+            method = method.replace("{modify_return_value}", link_update);
 
             if par["out"] == True:
                 method = method.replace("{is_out}", "true")
@@ -888,14 +888,14 @@ def getLocType(line):
 #
 # Return:
 # size expression
-def getParameterSizeExpression(par, use_read_length = False, use_return_length = False):
+def getParameterSizeExpression(par, use_read_length = False, use_link_update = False):
     length = "";
     if "length" in par:
         length = par["length"];
     if use_read_length and "set_length" in par:
         length = par["set_length"];
-    if use_return_length and "set_return" in par:
-        length = par["set_return"];
+    if use_link_update and "link_update" in par:
+        length = par["link_update"].split("=")[1].strip();
 
     if length == "return":
         size = "readInt(pid, RET)"
@@ -1008,6 +1008,40 @@ def generatePermissionCheckStatement(rule, funcinfo):
     return source;
 
 # Description:
+# Generates the source code line for linked updates.
+# These linked updates are automatically executed,
+# when a specific parameter is manipulated.
+#
+# Parameter:
+# funcinfo: function info
+# par: parameter info
+# larger_buffer_name_if_var_is_not_return_value: Define an alternative variable name for the source variable
+#   if we do not deal with a return value, where the size is strictly limited
+#
+# Return:
+# Code line
+def generateLinkUpdateSource(funcinfo, par, larger_buffer_name_if_var_is_not_return_value = None):
+    if not "link_update" in par:
+        return "";
+
+    update = par["link_update"];
+    variable = update.split("=")[0];
+    macro = "OVERWRITE({:s}, {:s})".format(variable, "__PLACEHOLDER__")
+
+    result = generateEmulatorOverwriteMacro(macro, funcinfo);
+    par_copy = dict(par);
+
+    if result[1] == False and not larger_buffer_name_if_var_is_not_return_value is None: 
+        par_copy["name"] = larger_buffer_name_if_var_is_not_return_value;
+    new_value = getParameterSizeExpression(par_copy, use_link_update = True);
+
+    line = "";
+    if variable != "return":
+        line = "{:s} = {:s};\n".format(variable, new_value);
+
+    return line + result[0].replace("__PLACEHOLDER__", new_value)
+
+# Description:
 # Generates the c-code a list of systemcalls within 
 # the emulator based on the sec_syscalls_conf.c file. 
 #
@@ -1054,15 +1088,16 @@ def generateEmulatorRuleCheck(line, expression_rules, funcinfo):
             final_action = "SEC_ACTION_ALLOW";
             if rule.getNewValue()[0] == "\"":
                 code = getSourceTemplate("rule_set_code_string");
+                
+                overwrite_action = getSourceTemplate("overwrite_return_param") if par["out"] == True else getSourceTemplate("overwrite_non_return_param")
+                code = code.replace("{consecutive_parameter_overwrite}", overwrite_action);
+
                 code = code.replace("{string}", rule.getNewValue())
                 code = code.replace("{nr}", str(par["argument_nr"]))
                 code = code.replace("{field}", rule.getField())
 
-                if "set_return" in par:
-                    size = getParameterSizeExpression(par, use_return_length = True)
-                    code = code.replace("{modify_return_value}", "modifyReturnValue(pid, {:s});".format(size));
-                else:
-                    code = code.replace("{modify_return_value}", "");
+                link_update = generateLinkUpdateSource(funcinfo, par, larger_buffer_name_if_var_is_not_return_value = "new_string.new_value");
+                code = code.replace("{modify_return_value}", link_update);
 
                 if par["out"] == True:
                     code = code.replace("{is_out}", "true")
@@ -1249,18 +1284,23 @@ def generateEmulatorFunction(expression_rules, funcinfo):
     template = template.strip()
 
     arg_load = []
-    cleanup = []
+    cleanup_needed = False;
+    cleanup = ["", "// cleanup memory"]
     for i in range(6, 0, -1):
         try:
             arginfo = config_funcdefs.getArgumentInfo(funcinfo["systemcall"], i, field_as_argument_nr = True)
             arg_load.append(generateMultiplexerParameterLoader(arginfo))
             if arginfo["pointer"]:
                 cleanup.append("free({:s});".format(arginfo["name"]))
+                cleanup_needed = True;
         except FieldNotFoundError as e:
             pass;
 
+    # append the cleanup part to the end of the function
+    if cleanup_needed == True:
+        c_source[-1:-1] = cleanup;
+
     template = template.replace("{param_load}", "\n".join(arg_load))
-    template = template.replace("{cleanup}", "\n".join(cleanup))
     template = template.replace("\n\n", "\n")
     template = template.strip("\n")
 

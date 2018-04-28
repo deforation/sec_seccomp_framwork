@@ -355,6 +355,7 @@ void start_tracer(){
 			// if we are on the productive system (no debug)
 			// or modify is called, we run the emulator
 			if (interfere == true){
+				reset_kernel_stack_addr();
 				performSystemcall(pid, status, syscall_n, syscall_action == SYSCALL_AFTER);
 			}
 		}

@@ -38,6 +38,8 @@
 #include "sec_ptrace_lib.h"
 
 extern int errno;
+static char *previous_stack_addr = NULL;
+static int previous_stack_param = -1;
 
 
 //-------------------------------------------------------
@@ -879,6 +881,11 @@ void copyDataToTraceeInplace(pid_t pid, char *base_address, char *data, size_t s
 	} while(data_idx < size);
 }
 
+void reset_kernel_stack_addr(){
+	previous_stack_addr = NULL;
+	previous_stack_param = -1;
+}
+
 /*
 * Description:
 * Modifies a specific Parameter. 
@@ -912,9 +919,17 @@ void modifyParameter(pid_t pid, int param_register, void *new_data, int new_size
 	}
 
 	// evaluate stack and new target address
-	stack_addr = (char *)ptrace(PTRACE_PEEKUSER, pid, sizeof(uintptr_t)*RSP, 0);
-	stack_addr -= RED_ZONE + new_size;
-	new_target_addr = stack_addr;
+	if (previous_stack_addr == NULL){
+		stack_addr = (char *)ptrace(PTRACE_PEEKUSER, pid, sizeof(uintptr_t)*RSP, 0);
+		stack_addr -= RED_ZONE + new_size;
+		new_target_addr = stack_addr;
+	} else if (param_register == previous_stack_param){
+		new_target_addr = previous_stack_addr;
+	} else {
+		new_target_addr = previous_stack_addr + new_size;
+	}
+	previous_stack_addr = new_target_addr;
+	previous_stack_param = param_register;
 
 	// write data to the lower part of the stack
 	copyDataToTracee(pid, new_target_addr, new_data_ptr, new_size);
