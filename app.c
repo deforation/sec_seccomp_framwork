@@ -81,23 +81,6 @@ void createFile(char *path){
 	printf("\n");
 }
 
-void *doThread1(void *arg){
-	(void)arg;
-	printf("THREAD\n");
-
-	int w = 50;
-	for (int i = 0; i < 50; i++){
-		readFile("./demo_files/replace/test.txt", "r");
-		for (int k = 0; k < 999999; k++){
-			w = (w + k) % 2;
-		}
-	}
-
-	(void)w;
-
-	return NULL;
-}
-
 
 /*
 * The main function has no other logic than starting
