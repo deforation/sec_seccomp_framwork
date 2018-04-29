@@ -81,6 +81,24 @@ void createFile(char *path){
 	printf("\n");
 }
 
+void *doThread1(void *arg){
+	(void)arg;
+	printf("THREAD\n");
+
+	int w = 50;
+	for (int i = 0; i < 50; i++){
+		readFile("./demo_files/replace/test.txt", "r");
+		for (int k = 0; k < 999999; k++){
+			w = (w + k) % 2;
+		}
+	}
+
+	(void)w;
+
+	return NULL;
+}
+
+
 /*
 * The main function has no other logic than starting
 * the sec_seccomp_framework.
@@ -91,6 +109,7 @@ void createFile(char *path){
 * The fourth argument is the function which should be executed after seccomp is initialized
 */
 int main(int argc, char **argv){
+
 	return run_seccomp_framework(argc, argv, sec_main_before, sec_main_after);
 }
 
@@ -162,6 +181,7 @@ int sec_main_after(int argc, char **argv){
 	chdir(cwdsafe);
 
 	// setrlimit test
+	/*
 	printf("\n------------------------ EXAMPLE 08 ---------------------\n");
 	printf("Try to modify different resource limits\n");
 	printf("Set RLIMIT_NPROC max to 50, we should be modified to 8 and cur to 1 less\n");
@@ -184,7 +204,7 @@ int sec_main_after(int argc, char **argv){
 	printf("cur: %ld\n", rlim.rlim_cur);
 	printf("max: %ld\n", rlim.rlim_max);
 	printf("errno: %d\n", errno);
-	
+	*/
 	// get timeofday test
 	printf("\n------------------------ EXAMPLE 10 ---------------------\n");
 	printf("Get the time which is slightly modified on each call\n");
