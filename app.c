@@ -164,7 +164,6 @@ int sec_main_after(int argc, char **argv){
 	chdir(cwdsafe);
 
 	// setrlimit test
-	/*
 	printf("\n------------------------ EXAMPLE 08 ---------------------\n");
 	printf("Try to modify different resource limits\n");
 	printf("Set RLIMIT_NPROC max to 50, we should be modified to 8 and cur to 1 less\n");
@@ -177,7 +176,6 @@ int sec_main_after(int argc, char **argv){
 	printf("max: %ld\n", rlim.rlim_max);
 	printf("errno: %d\n", errno);
 
-
 	printf("\n------------------------ EXAMPLE 09 ---------------------\n");
 	printf("\nTry to set RLIMIT_CPU to cur = 200 and max to 250. Should not be possible (skip call)\n");
 	lim = (struct rlimit){rlim_cur: 200, rlim_max: 250};
@@ -187,7 +185,7 @@ int sec_main_after(int argc, char **argv){
 	printf("cur: %ld\n", rlim.rlim_cur);
 	printf("max: %ld\n", rlim.rlim_max);
 	printf("errno: %d\n", errno);
-	*/
+	
 	// get timeofday test
 	printf("\n------------------------ EXAMPLE 10 ---------------------\n");
 	printf("Get the time which is slightly modified on each call\n");
