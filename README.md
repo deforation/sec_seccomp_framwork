@@ -11,6 +11,7 @@ The framework offers the ability to:
 The framework has for the rule generation process the following requirements:
 * Python >= 3.5
 * Python libraries: argparse, ConfigParser
+* Linux-packages: libseccomp-dev
 
 The c-part of the framework requires:
 * seccomp development libraries
