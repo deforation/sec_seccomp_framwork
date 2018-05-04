@@ -257,7 +257,7 @@ def reformulateComplexExpression(syscall, complex_statement):
                 exit()
             reg = SecRegexBuilder();
             reg.ignoreSpaces();
-            reg.scanString("string")
+            reg.scanAny("string")
             m = reg.execute(transition) 
 
             method = method.replace("{new_string}", m.group("string").strip())

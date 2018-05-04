@@ -149,6 +149,7 @@
 #
 ###################################################################
 
+import shlex
 from configparser import ConfigParser
 from libs.SecRegexBuilder import SecRegexBuilder
 
@@ -303,8 +304,20 @@ class SecInfParser:
 					rights = m.group("rights");	
 
 				# strip all vaues (separated with ,)
-				values = config.get(section, option).replace("\n", "").split(",");
-				values = [x.strip() for x in values]
+				values = config.get(section, option).replace("\n", "");
+
+				values = values.replace("\"", "-secdQt-")
+				values = values.replace("'", "-secsQt-")
+				values = values.replace("(", "\"(")
+				values = values.replace(")", ")\"")
+				values = values.replace("[", "\"[")
+				values = values.replace("]", "]\"")
+				values = values.replace("{", "\"{")
+
+				splitter = shlex.shlex(values, posix = True);
+				splitter.whitespace = ","
+				splitter.whitespace_split = True
+				values = list(map(lambda x: x.replace("-secdQt-", "\"").replace("-secsQt-", "'").strip(), list(splitter)))
 
 				if group not in rules[section]:
 					rules[section][group] = [];
