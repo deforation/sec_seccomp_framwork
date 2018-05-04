@@ -328,6 +328,7 @@ void start_tracer(){
 				} else if (trace_message & PTRACE_DBG_TERMINATE){
 					log_debug_action("TERMINATE", syscall_n);
 					kill(pid, SIGKILL);
+					exit(0);
 				} else if (trace_message & PTRACE_DBG_MODIFY){
 					log_debug_action("MODIFY", syscall_n);
 					interfere = true;

@@ -658,8 +658,7 @@ void performSystemcall(pid_t pid, int status, int syscall_n){
 				invalidateSystemcall(pid);
 				if (status>>8 == (SIGTRAP | (PTRACE_EVENT_SECCOMP<<8))){
 					printf("Called invalide system call [%d]. Application will be terminated.\n", syscall_n);
-					kill(pid, SIGSTOP);
-					exit(0);
+					kill(pid, SIGKIL);
 				}
 			}
 	}

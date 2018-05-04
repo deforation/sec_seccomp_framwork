@@ -1024,8 +1024,8 @@ void executeRuleResult(pid_t pid, struct sec_rule_result result, int param_regis
 			}
 			break;
 		case SEC_ACTION_TERMINATE: default:
-			writeLog(LOG_CRIT, "Application was terminated. Reason seccomp rule violation.");
-			kill(pid, SIGSTOP);
+			writeLog(LOG_CRIT, "Application terminated. Reason seccomp rule violation.");
+			kill(pid, SIGKILL);
 			exit(0);
 			break;
 	}
