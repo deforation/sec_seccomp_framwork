@@ -256,7 +256,7 @@ skip:				cmd == F_GETFD
 
 [recvfrom:after]
 default:			modify
-buf redirect:		starts_with("GET /data/private/") => "GET /data/public/"	
+buf redirect:			starts_with("GET /data/private/") => "GET /data/public/"	
 ```
 
 ## System call configuration scheme
