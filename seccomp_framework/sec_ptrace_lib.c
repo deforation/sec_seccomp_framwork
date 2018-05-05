@@ -255,9 +255,12 @@ bool stringMatchesPart(pid_t pid, const char *check, const char *string, size_t 
 	if (is_path == true){
 		real_string = getPidRealPath(pid, string);
 
-		contains = (strcasestr(real_string, check) != NULL) ? true : false;
-
-		free(real_string);
+		if (real_string != NULL){
+			contains = (strcasestr(real_string, check) != NULL) ? true : false;
+			free(real_string);
+		} else {
+			contains = (strcasestr(string, check) != NULL) ? true : false;
+		}
 	} else {
 		contains = (strcasestr(string, check) != NULL) ? true : false;
 	}
@@ -527,11 +530,15 @@ struct sec_rule_result changeStringOnPartMatch(pid_t pid, const char *check, con
 	struct sec_rule_result result = {.action = SEC_ACTION_NONE, .new_value = NULL, .size = -1};
 	char *real_string = NULL;
 	char *out_string = NULL;
-
 	if (is_path == true){
-		real_string = getPidRealPath(pid, string);
 
-		out_string = search_and_replace_all(check, new_string, real_string);
+		real_string = getPidRealPath(pid, string);
+		if (real_string != NULL){
+			out_string = search_and_replace_all(check, new_string, real_string);
+			free(real_string);
+		} else {
+			out_string = search_and_replace_all(check, new_string, string);
+		}
 	} else {
 		out_string = search_and_replace_all(check, new_string, string);
 	}

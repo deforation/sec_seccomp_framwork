@@ -119,6 +119,10 @@ void init_error_handling(){
 * true if the child has stopped or false if not
 */
 bool isChildTerminating(int status){
+	if (WIFSTOPPED(status) && WSTOPSIG(status) == SIGSEGV){
+		printf("Tracee: Terminated due to a segmentation fault.\n");
+		return true;
+	}
     return WIFEXITED(status) || WIFSIGNALED(status);
 }
 
@@ -252,6 +256,7 @@ void start_tracer(){
 
 	struct user_regs_struct regs;
 	pid_t pid;
+	pid_t main_process_pid;
 	long trace_message = -1;
 	int status = 0;
 	int syscall_n = 0;
@@ -264,7 +269,7 @@ void start_tracer(){
 	statelist = init_syscall_state(-1);
 
 	// wait for client to appear
-	pid = waitpid(-1, &status, __WALL);
+	main_process_pid = pid = waitpid(-1, &status, __WALL);
 	ptrace(PTRACE_SETOPTIONS, pid, 0, PTRACE_O_TRACESECCOMP | PTRACE_O_EXITKILL | PTRACE_O_TRACECLONE | PTRACE_O_TRACEEXEC | PTRACE_O_TRACEFORK );
 
 	// load seccomp rules
@@ -285,7 +290,7 @@ void start_tracer(){
 
 			// if pid -1 is terminating, the application exited. 
 			// The tracer will therefore be terminated
-			if (pid == -1)
+			if (pid == -1 || pid == main_process_pid)
 				break;
 		}
 

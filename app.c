@@ -128,11 +128,11 @@ int sec_main_after(int argc, char **argv){
 
 	printf("------------------------ EXAMPLE 04 ---------------------\n");
 	printf(" ** Try to create a file and write data into it in a directory where create is disallowed and read allowed. Should not be allowed.\n");
-	createFile("./demo_files/write_yes_create_no/existing.txt");
+	createFile("./demo_files/read_yes_create_no/existing.txt");
 
 	printf("------------------------ EXAMPLE 05 ---------------------\n");
 	printf(" ** Try to read a file in a directory where create is disallowed and read allowed. Should be possible.\n");
-	readFile("./demo_files/write_yes_create_no/existing.txt", "r+");
+	readFile("./demo_files/read_yes_create_no/existing.txt", "r");
 
 	printf("------------------------ EXAMPLE 06 ---------------------\n");
 	printf(" ** Try to read a file with the ending .dat. Should redirected to the .txt file.\n");
@@ -200,7 +200,6 @@ int sec_main_after(int argc, char **argv){
 		strftime(buffer,30,"%m-%d-%Y  %T.",localtime(&curtime));
 		printf("%s%ld\n",buffer,tv.tv_usec);
 	}
-
 
 	printf("\n------------------------ EXAMPLE 11 ---------------------\n");
 	printf("Try to read the access mode with fcntl -> should be possible\n");

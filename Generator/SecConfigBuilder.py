@@ -993,10 +993,8 @@ def generatePermissionCheckStatement(rule, funcinfo):
         source = "{:s} || {:s}".format(source, check_template.replace("{variable}", field).replace("{flag}", "O_RDWR"))
     elif "r" in permissions:
         source = "{:s}".format(                check_template.replace("{variable}", field).replace("{flag}", "O_RDONLY"))
-        source = "{:s} || {:s}".format(source, check_template.replace("{variable}", field).replace("{flag}", "O_RDWR"))
     elif "w" in permissions:
         source = "{:s}".format(                check_template.replace("{variable}", field).replace("{flag}", "O_WRONLY"))
-        source = "{:s} || {:s}".format(source, check_template.replace("{variable}", field).replace("{flag}", "O_RDWR"))
 
     check_template = getSourceTemplate("rule_permission_check")
     if "c" in permissions:
