@@ -843,14 +843,19 @@ char* readTerminatedString(pid_t pid, int param_register){
 */
 void copyDataToTracee(pid_t pid, char *base_address, char *data, size_t size){
 	size_t data_idx = 0;
+	union{
+		char str[sizeof(uintptr_t)];
+		uintptr_t val;
+	} target;
+	
 	do {
-		char val[sizeof(uintptr_t)];
+		target.val = 0;
 
 		for (size_t i = 0; i < sizeof(uintptr_t) && data_idx < size; ++i, ++data_idx, ++data){
-			val[i] = *data;
+			target.str[i] = *data;
 		}
 
-		ptrace(PTRACE_POKETEXT, pid, base_address, *(uintptr_t *)val);
+		ptrace(PTRACE_POKETEXT, pid, base_address, target.val);
 		base_address += sizeof(uintptr_t);
 	} while(data_idx < size);
 }
@@ -872,18 +877,23 @@ void copyDataToTracee(pid_t pid, char *base_address, char *data, size_t size){
 */
 void copyDataToTraceeInplace(pid_t pid, char *base_address, char *data, size_t size){
 	size_t data_idx = 0;
+	union{
+		char str[sizeof(uintptr_t)];
+		uintptr_t val;
+	} target;
 
 	do {
-		char target_value[sizeof(uintptr_t)];
+		target.val = 0;
+
 		long original_value = ptrace(PTRACE_PEEKTEXT, pid, base_address, NULL);
 
-		memcpy(target_value, (char *)&original_value, sizeof(uintptr_t));
+		memcpy(target.str, (char *)&original_value, sizeof(uintptr_t));
 
 		for (size_t i = 0; i < sizeof(uintptr_t) && data_idx < size; ++i, ++data_idx, ++data){
-			target_value[i] = *(char *)data;
+			target.str[i] = *(char *)data;
 		}
 
-		ptrace(PTRACE_POKETEXT, pid, base_address, *(uintptr_t *)target_value);
+		ptrace(PTRACE_POKETEXT, pid, base_address, target.val);
 		base_address += sizeof(uintptr_t);
 	} while(data_idx < size);
 }
