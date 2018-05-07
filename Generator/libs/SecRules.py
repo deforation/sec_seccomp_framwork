@@ -107,7 +107,14 @@ class ExpressionRule:
 		return hash((self.syscall, self.type, self.action, self.field, self.check, self.to))
 
 	def __repr__(self):
+		field = self.field;
+		check = self.check;
+		if self.field is None:
+			field = "";
+		if self.check is None:
+			check = "";
+
 		if self.to is None:
-			return "(" + " )( ".join([self.syscall, self.type, self.action, self.field, self.check]) + ")"
+			return "(" + " )( ".join([self.syscall, self.type, self.action, field, check]) + ")"
 		else:
-			return "(" + " )( ".join([self.syscall, self.type, self.action, self.field, self.check, self.to]) + ")"
+			return "(" + " )( ".join([self.syscall, self.type, self.action, field, check, self.to]) + ")"

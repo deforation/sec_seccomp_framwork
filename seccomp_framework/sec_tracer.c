@@ -70,6 +70,7 @@ extern int errno;
 typedef struct _syscall_state{
 	pid_t pid;
 	int state[SYSCALL_STATE_SIZE];
+	bool after_scan_pending;
 
 	struct _syscall_state *next;
 } _syscall_state, *syscall_state;
@@ -176,6 +177,7 @@ syscall_state init_syscall_state(pid_t pid){
 	}
 	newstate->next = NULL;
 	newstate->pid = pid;
+	newstate->after_scan_pending = false;
 
 	return newstate;
 }
@@ -208,6 +210,29 @@ syscall_state get_syscall_state(syscall_state state, pid_t pid){
 
 	node->next = init_syscall_state(pid);
 	return node->next;
+}
+
+/*
+* Description:
+* Evaluted if a process is waiting for an after execution check.
+*
+* Parameter:
+* state: state start point of the linked list
+*
+* Return:
+* true if a process is waiting for the acter signal
+*/
+bool after_scan_pending(syscall_state state){
+	syscall_state node = state;
+
+	while (node != NULL){
+		if (node->after_scan_pending == true){
+			return true;
+		}
+		node = node->next;
+	}
+
+	return false;
 }
 
 /*
@@ -279,7 +304,13 @@ void start_tracer(){
 	errno = 0;
 	while(1){
 		// Init wait for event
-		ptrace(PTRACE_SYSCALL, pid, 0, 0 );
+		// If we wait for an after exeuction signal, we have to scan for all system calls.
+		// Otherwise we can just wait for an appropriate seccomp event
+		if (after_scan_pending(statelist) == true){
+			ptrace(PTRACE_SYSCALL, pid, 0, 0 );
+		} else {
+			ptrace(PTRACE_EVENT_SECCOMP, pid, 0, 0 );
+		}
 
 		// wait for event to happen
 		pid = waitpid(-1, &status, __WALL);
@@ -314,8 +345,16 @@ void start_tracer(){
 			if (is_seccomp_event){
 				sysstate->state[syscall_n] = (trace_message & PTRACE_USE_AFTER) ? SYSCALL_BEFORE_AFTER_SUPPORT : SYSCALL_BEFORE;
 				sysstate->state[syscall_n] = (trace_message & PTRACE_USE_AFTER_ONLY) ? SYSCALL_AFTER_ONLY : sysstate->state[syscall_n];
+
+				// do keep in head that we are searching for the after signal of a function
+				if (sysstate->state[syscall_n] != SYSCALL_BEFORE){
+					sysstate->after_scan_pending = true;
+				}
 			} else if (sysstate->state[syscall_n] == SYSCALL_BEFORE_AFTER_SUPPORT || sysstate->state[syscall_n] == SYSCALL_AFTER_ONLY){
 				sysstate->state[syscall_n] = SYSCALL_AFTER;
+
+				// revoke the pending after signal because we received it
+				sysstate->after_scan_pending = false;
 			} else {
 				sysstate->state[syscall_n] = SYSCALL_NONE;
 			}
