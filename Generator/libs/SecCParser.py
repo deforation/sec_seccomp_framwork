@@ -413,6 +413,7 @@ class CParser:
 			self.__setChildChildKeyValue(data, "arguments", variable, "datatype", datatype)
 			self.__setChildChildKeyValue(data, "arguments", variable, "argument_nr", argument_nr)
 			self.__setChildChildKeyValue(data, "arguments", variable, "name", variable)
+			self.__setChildChildKeyValue(data, "arguments", variable, "syscall", data["systemcall"])
 		else:
 			print("Syntax error in Parameter <{:s}>. Please check if the declaration is in a correct c syntax.".format(line));
 			exit()	

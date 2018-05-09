@@ -698,7 +698,17 @@ def generateSeccompRuleCode(rules, comment, for_tracer = False):
                 else:
                     action_str = action_str.replace("{aftersupportflag}", " | PTRACE_USE_AFTER")
             else:
-                action_str = action_str.replace("{aftersupportflag}", "")
+                if rule.getAction() == "modify":
+                    before_version = config_funcdefs.getFuncInfo(rule.getSyscall().replace(":after", ""))
+                    after_version = config_funcdefs.getFuncInfo(rule.getSyscall().replace(":after", "") + ":after")
+                    if after_version and before_version:
+                        action_str = action_str.replace("{aftersupportflag}", " | PTRACE_USE_AFTER")
+                    elif after_version:
+                        action_str = action_str.replace("{aftersupportflag}", " | PTRACE_USE_AFTER_ONLY")
+                    else:
+                        action_str = action_str.replace("{aftersupportflag}", "")
+                else:
+                    action_str = action_str.replace("{aftersupportflag}", "")
 
             if rule.getSyscall():
                 if rule.hasParameterChecks():
@@ -896,6 +906,14 @@ def getParameterSizeExpression(par, use_read_length = False, use_link_update = F
         length = par["set_length"];
     if use_link_update and "link_update" in par:
         length = par["link_update"].split("=")[1].strip();
+
+    # dereference potential pointer object used as size
+    try:
+        is_len_arg = config_funcdefs.getArgumentInfo(par["syscall"], length)
+        if is_len_arg["pointer"] == True:
+            length = "*{:s}".format(length)
+    except FieldNotFoundError:
+        pass;
 
     if length == "return":
         size = "readInt(pid, RET)"
