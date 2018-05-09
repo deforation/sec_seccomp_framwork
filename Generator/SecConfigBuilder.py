@@ -185,7 +185,10 @@ def transformGroupToFieldName(syscall, group_field):
         return None
 
     parts = group_field.split("->")
-    parts[0] = config_funcdefs.getArgumentInfo(syscall, parts[0])["name"]
+    try:
+        parts[0] = config_funcdefs.getArgumentInfo(syscall, parts[0])["name"]
+    except FieldNotFoundError as e:
+        pass;
 
     return "->".join(parts);
 
@@ -1099,10 +1102,10 @@ def generateEmulatorRuleCheck(line, expression_rules, funcinfo):
 
         rule_src = ""
         if not rule.getCheck() is None: 
-            par = config_funcdefs.getArgumentInfo(rule.getSyscall(), rule.getField());
             code = ""
             final_action = "SEC_ACTION_ALLOW";
             if rule.getNewValue()[0] == "\"":
+                par = config_funcdefs.getArgumentInfo(rule.getSyscall(), rule.getField());
                 code = getSourceTemplate("rule_set_code_string");
                 
                 overwrite_action = getSourceTemplate("overwrite_return_param") if par["out"] == True else getSourceTemplate("overwrite_non_return_param")
@@ -1122,12 +1125,16 @@ def generateEmulatorRuleCheck(line, expression_rules, funcinfo):
                     code = code.replace("{is_out}", "false")
                     code = code.replace("{max_size}", "-1")
             else:
-                par = config_funcdefs.getArgumentInfo(rule.getSyscall(), rule.getField());
-                code = getSourceTemplate("rule_set_code_val");
-                code = code.replace("{variable}", rule.getField())
-                code = code.replace("{new_value}", transformGroupToFieldNameInExpression(rule.getSyscall(), rule.getNewValue(), primitive_change = True))
-                overwrite = generateEmulatorOverwriteMacro("OVERWRITE({:s}, {:s})".format(field, field), funcinfo);
-                code = code.replace("{overwrite}", overwrite[0])
+                overwrite = {}
+                if rule.getField() == "return":
+                    overwrite = generateEmulatorOverwriteMacro("OVERWRITE({:s}, {:s})".format(field, rule.getNewValue()), funcinfo);
+                    code = overwrite[0]
+                else:                
+                    code = getSourceTemplate("rule_set_code_val");
+                    code = code.replace("{variable}", rule.getField())
+                    code = code.replace("{new_value}", transformGroupToFieldNameInExpression(rule.getSyscall(), rule.getNewValue(), primitive_change = True))
+                    overwrite = generateEmulatorOverwriteMacro("OVERWRITE({:s}, {:s})".format(field, field), funcinfo);
+                    code = code.replace("{overwrite}", overwrite[0])
 
                 # if the rule overwrites a return value / parameter, we have to hinder the system call from execution
                 # otherwise the change whould have no effect
