@@ -166,9 +166,9 @@ int sec_main_after(int argc, char **argv){
 	// setrlimit test
 	printf("\n------------------------ EXAMPLE 08 ---------------------\n");
 	printf("Try to modify different resource limits\n");
-	printf("Set RLIMIT_NPROC max to 50, we should be modified to 8 and cur to 1 less\n");
+	printf("Set RLIMIT_NPROC max to 500, we should be modified to 200 and cur to 1 less\n");
 	errno = 0;
-	struct rlimit lim = {rlim_cur: 40, rlim_max: 50};
+	struct rlimit lim = {rlim_cur: 500, rlim_max: 480};
 	struct rlimit rlim; 
 	setrlimit(RLIMIT_NPROC, &lim);
 	getrlimit(RLIMIT_NPROC, &rlim);
