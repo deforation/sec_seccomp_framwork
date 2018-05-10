@@ -104,7 +104,7 @@ bool stringMatchesStart(pid_t pid, const char *check, const char *string, size_t
 bool stringMatchesPart(pid_t pid, const char *check, const char *string, size_t string_length, bool is_path);
 bool stringMatchesEnd(pid_t pid, const char *check, const char *string, size_t string_length, bool is_path);
 bool fdPathMatchesStart(pid_t pid, const char *check, int fd);
-bool fdPathMathesPart(pid_t pid, const char *check, int fd);
+bool fdPathMatchesPart(pid_t pid, const char *check, int fd);
 bool fdPathMatchesEnd(pid_t pid, const char *check, int fd);
 struct sec_rule_result changeStringOnStartMatch(pid_t pid, const char *check, const char *string, size_t string_length, const char *new_string, bool is_path);
 struct sec_rule_result changeStringOnPartMatch(pid_t pid, const char *check, const char *string, size_t string_length, const char *new_string, bool is_path);

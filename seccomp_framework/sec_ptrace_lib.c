@@ -399,7 +399,7 @@ bool fdPathMatchesEnd(pid_t pid, const char *check, int fd){
 * check: string to match on the parameter string
 * fd: file descriptor to check
 */
-bool fdPathMathesPart(pid_t pid, const char *check, int fd){
+bool fdPathMatchesPart(pid_t pid, const char *check, int fd){
 	char file[80] = {"/0"};
 	bool result = false;
 
