@@ -36,9 +36,6 @@ To use the framework, the following steps must be performed:
 9. Compile the application [all framework files have to be linked]
 
 These 9 easy steps are everything it needs to configure and use the framework.
-Depending on the used compiler, a flag has to be set during compilation to add seccomp support.
-
-* For gcc, add the compiler flag -lseccomp
 
 Note: Step 5 is the main call which starts the whole seccomp framework.
 The function call consists of 4 parameters:
@@ -175,6 +172,7 @@ to specify multiple checks / actions by separating them with a comma
 			example: filename
 			example: buf
 			example: rlim->rlim_max
+			example: return
 
 - {value_check}  	defines a check against a specific value. These can easier be transformed
 			into kernel checked system calls.
@@ -188,6 +186,7 @@ to specify multiple checks / actions by separating them with a comma
 			example: redirect		resource == 1 && rlim->rlim_max > 2048: rlim->rlim_max => 1024
 			example: path redirect:		dir_starts_with("/home/remo/denied") => "/home/remo/allowed"
  			example: redirect:		filename dir_ends_with(".txt") => ".dat"
+ 			example: redirect:		buf contains("invalid"): return => -1
 
 
 default:				{action} 	//specifies the default action of a syscall section
@@ -276,7 +275,7 @@ NOTE:
 This file consists only of some system calls for demo purpose and to show the possibilities as well as the functions the framework provides
 
 Note: 
-There are 3 different length flags called (set_length, read_length and set_return)
+There are 3 different length flags called (set_length, read_length and link_update)
  - set_length:  defines the length of a system all argument. This can either be strlen or mor likely strlen+1, the name of another argumen or it can be skiped. If the value is skiped, sizeof(datatype) is used by default
  - read_length: The read length defines how many bytes have to be read from the target application. This has the following reason: If we modify the read systemcall after it was executed we are able to manipulate the retrieved data. Now, if we would read the whole length according to the buffer size we may end up reading parts of old data. To prevent this, we need the return value of the system call, which gives us the information how many bytes have been read (are valid in the buffer). In the case of SYS_read, we would therefore have to define the length to "return". As a result, only the given amount of data is read. If the option is not defined, the set_length rule is used.
  - link_update: Enables the possibility to link updates. So that after a specific parameter was manipulated, a second one will be modified at the same time. This allows us to define a rule to modify for example the output of the read system call and return the new length of the modified string with the system call. If we for example change the read output of "leet" to "magnus", the return value has to be set to the new length of magnus. Otherwise the application would just read "magn", which is not what we want. The same behaviour can be observed with the write system call. If the write buffer is modified, the count parameter has to be updated to the length of the new buffer.
@@ -346,7 +345,7 @@ of a comment block defining important data and the function itself
 * set_group[{field}]:		{group_name_list}
 * set_length[{field}]:		{length}
 * read_length[{field}]:		{length}
-* set_return[{field}]:		{length}
+* link_update[{field}]:		{field}={length}
 * /
 void sec_functionname({arguments}){
 	// any kind of source

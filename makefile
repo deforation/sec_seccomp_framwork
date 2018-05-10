@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS =  -pthread -Wall -Wextra -Werror -fwrapv -s -lseccomp  -Ofast
+CFLAGS =  -pthread -Wall -Wextra -Werror -fwrapv -s -Ofast
 #CFLAGS =   -Ofast  -std=c99 -g3 -Wall -Wextra -Wpointer-arith -Wcast-align -Wwrite-strings -Wswitch-default -Wunreachable-code -Winit-self -Wmissing-field-initializers -Wno-unknown-pragmas -Wstrict-prototypes -Wundef -Wold-style-definition -fwrapv
 
 # ------ NO USER SERVICEABLE PARTS BELOW
