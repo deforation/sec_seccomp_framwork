@@ -1,5 +1,5 @@
 // include the sec_client module
-#include "seclib.h"
+#include "seccomp_framework/seclib.h"
 
 #include <stdio.h>
 #include <stdlib.h>

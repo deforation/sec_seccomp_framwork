@@ -46,8 +46,8 @@
 #include <limits.h>
 #include <string.h>
 
-#include "seccomp_framework/sec_client.h"
-#include "seccomp_framework/sec_tracer.h"
+#include "sec_client.h"
+#include "sec_tracer.h"
 
 // Some macros for easy readibility
 #define IS_CHILD_PROC(pid) 	pid==0

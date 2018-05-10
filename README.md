@@ -28,7 +28,7 @@ To use the framework, the following steps must be performed:
 1. Download the respository
 2. Rename the main function (int main ...) of the application to (int sec_main_after) or something else
 3. Optional: Add a main function (int sec_main_before ...) if needed, to perform privileged actions
-4. Include the header file "seclib.h"
+4. Include the header file "seccomp_framework/seclib.h"
 5. Create a new main function and call: return run_seccomp_framework(argc, argv, sec_main_before, sec_main_after);
 6. Write rules and modify/extend the system call configuration file if required.
 7. Generate the seccomp and tracer rule checks with the python script "SecConfigBuilder.py"
@@ -61,7 +61,7 @@ The following is a minimum example for the main applications source file:
 ```c
 #include <stdio.h>
 #include <stdlib.h>
-#include "seclib.h"
+#include "seccomp_framework/seclib.h"
 
 // function prototypes
 int sec_main_before(int argc, char **argv);
