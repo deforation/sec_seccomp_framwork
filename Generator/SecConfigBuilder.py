@@ -489,6 +489,14 @@ def fetchExpressionRules(seccomp_rules, expression_rules):
                             _from = value.split("=>")[0].strip()
                             _to = value.split("=>")[1].strip()
 
+                            if ":" in value and "=>" in value:
+                                print("Error in rule <" + value + "> for system call <" + syscall + ">")
+                                print("---")
+                                print("The basic Rule expression type: <field action:    check> does not allow expressions in the form of <check: target => new value>.")
+                                print("Use the advanced Rule expression type instead. Example: <action:  field check: target => new value ....>")
+                                print("Abort Process")
+                                exit()   
+
                             reg = SecRegexBuilder();
                             reg.scanOperator("op", optional=True)
                             reg.ignoreSpaces();
@@ -509,10 +517,19 @@ def fetchExpressionRules(seccomp_rules, expression_rules):
                         non_primitive_checks = []
                         for value in rule["values"]:
                             if "&&" in value or "||" in value:
+                                print("Error in rule <" + value + "> for system call <" + syscall + ">")
+                                print("---")
                                 print("The basic Rule expression type: <field action:    check> does not allow complex expressions with && or ||.")
                                 print("Use the advanced Rule expression type instead. Example: <action:  field op check && field op check ....>")
                                 print("Abort Process")
-                                exit()
+                                exit()     
+
+                            if ":" in value and " => " in value:    
+                                print("Error in rule <" + value + "> for system call <" + syscall + ">")
+                                print("---")
+                                print("Only redirect rules allow the manipulation of system call arguments or the return value.")
+                                print("Abort Process")
+                                exit()     
 
                             if not "(" in value:
                                 reg = SecRegexBuilder();
@@ -601,6 +618,13 @@ def fetchExpressionRules(seccomp_rules, expression_rules):
 
                     else:       
                         for value in rule["values"]:
+                            if " => " in value:
+                                print("Error in rule <" + value + "> for system call <" + syscall + ">")
+                                print("---")
+                                print("Only redirect rules allow the manipulation of system call arguments or the return value.")
+                                print("Abort Process")
+                                exit()      
+
                             if "->" in value:
                                 addPermissionRule(seccomp_rules, expression_rules, syscall, action = rule["action"], _complex_statement = value, _permissions = permissions)
                             else:
