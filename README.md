@@ -531,7 +531,7 @@ The application execution starts with the main framework file "seclib.c". After 
 
 Before seccomp gets initialized, the sec_main_before function of the application is called which allows to perform privileged operations. Afterwards, both the tracer and the main application load their seccomp rules. After this step, sec_main_after is called which should contain the main start routine of the application. At this point, the privilege dropping process has taken place and all further systemcalls are strictly checked using seccomp and the tracer part of the application.
 
-![framework overview](https://raw.githubusercontent.com/deforation/sec_seccomp_framwork/master/readme_images/framework_sequence.jpg "System call execution scheme")
+![framework overview](https://raw.githubusercontent.com/deforation/sec_seccomp_framwork/master/readme_images/framework_sequence.jpg?v=2 "System call execution scheme")
 
 If the application tries to execute a system call, it is checked within the kernel against the defined seccomp rules.
 Redirection and modification rules as well as rules with checks on data behind pointers (which is not possible in seccomp itself) are redirected to the tracer. The tracer than performes the action according to the rules and either let the application execute the system call or emulate the system call for it.
