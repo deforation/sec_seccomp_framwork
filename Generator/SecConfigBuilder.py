@@ -1129,25 +1129,30 @@ def generateEmulatorRuleCheck(line, expression_rules, funcinfo):
             code = ""
             final_action = "SEC_ACTION_ALLOW";
             if rule.getNewValue()[0] == "\"":
-                par = config_funcdefs.getArgumentInfo(rule.getSyscall(), rule.getField());
-                code = getSourceTemplate("rule_set_code_string");
-                
-                overwrite_action = getSourceTemplate("overwrite_return_param") if par["out"] == True else getSourceTemplate("overwrite_non_return_param")
-                code = code.replace("{consecutive_parameter_overwrite}", overwrite_action);
+                # check if we deal with a complex expression (means a function is used to check a field)
+                if (not " " in rule.getField()):
+                    par = config_funcdefs.getArgumentInfo(rule.getSyscall(), rule.getField());
 
-                code = code.replace("{string}", rule.getNewValue())
-                code = code.replace("{nr}", str(par["argument_nr"]))
-                code = code.replace("{field}", rule.getField())
+                    code = getSourceTemplate("rule_set_code_string");
+                    
+                    overwrite_action = getSourceTemplate("overwrite_return_param") if par["out"] == True else getSourceTemplate("overwrite_non_return_param")
+                    code = code.replace("{consecutive_parameter_overwrite}", overwrite_action);
 
-                link_update = generateLinkUpdateSource(funcinfo, par, larger_buffer_name_if_var_is_not_return_value = "new_string.new_value");
-                code = code.replace("{modify_return_value}", link_update);
+                    code = code.replace("{string}", rule.getNewValue())
+                    code = code.replace("{nr}", str(par["argument_nr"]))
+                    code = code.replace("{field}", rule.getField())
 
-                if par["out"] == True:
-                    code = code.replace("{is_out}", "true")
-                    code = code.replace("{max_size}", getParameterSizeExpression(par))
+                    link_update = generateLinkUpdateSource(funcinfo, par, larger_buffer_name_if_var_is_not_return_value = "new_string.new_value");
+                    code = code.replace("{modify_return_value}", link_update);
+
+                    if par["out"] == True:
+                        code = code.replace("{is_out}", "true")
+                        code = code.replace("{max_size}", getParameterSizeExpression(par))
+                    else:
+                        code = code.replace("{is_out}", "false")
+                        code = code.replace("{max_size}", "-1")
                 else:
-                    code = code.replace("{is_out}", "false")
-                    code = code.replace("{max_size}", "-1")
+                    code = reformulateComplexExpression(rule.getSyscall(), rule.getField() + "=>" + rule.getNewValue())
             else:
                 overwrite = {}
                 if rule.getField() == "return":
